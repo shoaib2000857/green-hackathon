@@ -1,0 +1,490 @@
+{
+  "metadata": {
+    "graph_source": "ingested",
+    "generated_at": "2026-05-12T05:28:18.276492+00:00",
+    "node_count": 17,
+    "edge_count": 27,
+    "sources": [
+      "Built-in curated demo logistics hubs",
+      "UN/LOCODE local file: /path/to/unlocode.csv",
+      "World Port Index local file: /path/to/world_port_index.csv",
+      "Emission factors: local factor file"
+    ],
+    "api_sources_used": [
+      "OSRM"
+    ],
+    "dataset_counts": {
+      "unlocode_rows_used": 0,
+      "world_port_index_rows_used": 0
+    },
+    "notes": [
+      "The graph is built from local public-data exports when provided.",
+      "API calls are optional and only run with --enable-apis or INGEST_ENABLE_APIS=true.",
+      "Missing API credentials fall back to deterministic distance, time, cost, and risk heuristics."
+    ]
+  },
+  "nodes": [
+    {
+      "node_id": "INMAA_PORT",
+      "name": "Chennai Port",
+      "type": "port",
+      "latitude": 13.095,
+      "longitude": 80.309,
+      "country": "India"
+    },
+    {
+      "node_id": "INMAA_AIR",
+      "name": "Chennai Air Cargo",
+      "type": "airport",
+      "latitude": 12.994,
+      "longitude": 80.17,
+      "country": "India"
+    },
+    {
+      "node_id": "INBLR_AIR",
+      "name": "Bengaluru Air Cargo",
+      "type": "airport",
+      "latitude": 13.198,
+      "longitude": 77.706,
+      "country": "India"
+    },
+    {
+      "node_id": "INDEL_RAIL",
+      "name": "Delhi Rail Logistics Hub",
+      "type": "rail",
+      "latitude": 28.644,
+      "longitude": 77.216,
+      "country": "India"
+    },
+    {
+      "node_id": "INNSA_PORT",
+      "name": "Nhava Sheva Port",
+      "type": "port",
+      "latitude": 18.949,
+      "longitude": 72.952,
+      "country": "India"
+    },
+    {
+      "node_id": "LKCMB_PORT",
+      "name": "Colombo Port",
+      "type": "port",
+      "latitude": 6.948,
+      "longitude": 79.844,
+      "country": "Sri Lanka"
+    },
+    {
+      "node_id": "SGSIN_PORT",
+      "name": "Port of Singapore",
+      "type": "port",
+      "latitude": 1.265,
+      "longitude": 103.82,
+      "country": "Singapore"
+    },
+    {
+      "node_id": "SGSIN_AIR",
+      "name": "Changi Air Cargo",
+      "type": "airport",
+      "latitude": 1.364,
+      "longitude": 103.991,
+      "country": "Singapore"
+    },
+    {
+      "node_id": "MYKUL_RAIL",
+      "name": "Kuala Lumpur Inland Terminal",
+      "type": "rail",
+      "latitude": 3.139,
+      "longitude": 101.687,
+      "country": "Malaysia"
+    },
+    {
+      "node_id": "THBKK_HUB",
+      "name": "Bangkok Logistics Hub",
+      "type": "inland_terminal",
+      "latitude": 13.756,
+      "longitude": 100.501,
+      "country": "Thailand"
+    },
+    {
+      "node_id": "VNSGN_PORT",
+      "name": "Ho Chi Minh Port",
+      "type": "port",
+      "latitude": 10.776,
+      "longitude": 106.7,
+      "country": "Vietnam"
+    },
+    {
+      "node_id": "VNHAN_RAIL",
+      "name": "Hanoi Rail Terminal",
+      "type": "rail",
+      "latitude": 21.028,
+      "longitude": 105.834,
+      "country": "Vietnam"
+    },
+    {
+      "node_id": "JPYOK_PORT",
+      "name": "Port of Yokohama",
+      "type": "port",
+      "latitude": 35.443,
+      "longitude": 139.638,
+      "country": "Japan"
+    },
+    {
+      "node_id": "JPTYO_AIR",
+      "name": "Tokyo Air Cargo",
+      "type": "airport",
+      "latitude": 35.772,
+      "longitude": 140.392,
+      "country": "Japan"
+    },
+    {
+      "node_id": "JPTYO_CITY",
+      "name": "Tokyo Distribution Center",
+      "type": "warehouse",
+      "latitude": 35.676,
+      "longitude": 139.65,
+      "country": "Japan"
+    },
+    {
+      "node_id": "CNSHA_PORT",
+      "name": "Shanghai Port",
+      "type": "port",
+      "latitude": 31.23,
+      "longitude": 121.473,
+      "country": "China"
+    },
+    {
+      "node_id": "CNHKG_AIR",
+      "name": "Hong Kong Air Cargo",
+      "type": "airport",
+      "latitude": 22.308,
+      "longitude": 113.918,
+      "country": "China"
+    }
+  ],
+  "edges": [
+    {
+      "edge_id": "E001",
+      "source_node": "INMAA_PORT",
+      "target_node": "INMAA_AIR",
+      "mode": "truck",
+      "distance_km": 24.821,
+      "travel_time_hr": 0.5,
+      "base_cost_usd": 25.0,
+      "emission_factor_kg_per_tonne_km": 0.092,
+      "reliability": 0.95,
+      "risk": 0.05
+    },
+    {
+      "edge_id": "E002",
+      "source_node": "INMAA_PORT",
+      "target_node": "INBLR_AIR",
+      "mode": "truck",
+      "distance_km": 337.522,
+      "travel_time_hr": 5.819,
+      "base_cost_usd": 141.76,
+      "emission_factor_kg_per_tonne_km": 0.092,
+      "reliability": 0.88,
+      "risk": 0.12
+    },
+    {
+      "edge_id": "E003",
+      "source_node": "INMAA_PORT",
+      "target_node": "INDEL_RAIL",
+      "mode": "rail",
+      "distance_km": 2180.0,
+      "travel_time_hr": 49.545,
+      "base_cost_usd": 392.4,
+      "emission_factor_kg_per_tonne_km": 0.024,
+      "reliability": 0.84,
+      "risk": 0.16
+    },
+    {
+      "edge_id": "E004",
+      "source_node": "INDEL_RAIL",
+      "target_node": "INNSA_PORT",
+      "mode": "rail",
+      "distance_km": 1400.0,
+      "travel_time_hr": 31.818,
+      "base_cost_usd": 252.0,
+      "emission_factor_kg_per_tonne_km": 0.024,
+      "reliability": 0.82,
+      "risk": 0.18
+    },
+    {
+      "edge_id": "E005",
+      "source_node": "INMAA_PORT",
+      "target_node": "LKCMB_PORT",
+      "mode": "sea",
+      "distance_km": 1290.0,
+      "travel_time_hr": 39.091,
+      "base_cost_usd": 116.1,
+      "emission_factor_kg_per_tonne_km": 0.014,
+      "reliability": 0.77,
+      "risk": 0.23
+    },
+    {
+      "edge_id": "E006",
+      "source_node": "LKCMB_PORT",
+      "target_node": "SGSIN_PORT",
+      "mode": "sea",
+      "distance_km": 2750.0,
+      "travel_time_hr": 83.333,
+      "base_cost_usd": 247.5,
+      "emission_factor_kg_per_tonne_km": 0.014,
+      "reliability": 0.74,
+      "risk": 0.26
+    },
+    {
+      "edge_id": "E007",
+      "source_node": "INMAA_PORT",
+      "target_node": "SGSIN_PORT",
+      "mode": "sea",
+      "distance_km": 2920.0,
+      "travel_time_hr": 88.485,
+      "base_cost_usd": 262.8,
+      "emission_factor_kg_per_tonne_km": 0.014,
+      "reliability": 0.78,
+      "risk": 0.22
+    },
+    {
+      "edge_id": "E008",
+      "source_node": "INNSA_PORT",
+      "target_node": "SGSIN_PORT",
+      "mode": "sea",
+      "distance_km": 3940.0,
+      "travel_time_hr": 119.394,
+      "base_cost_usd": 354.6,
+      "emission_factor_kg_per_tonne_km": 0.014,
+      "reliability": 0.75,
+      "risk": 0.25
+    },
+    {
+      "edge_id": "E009",
+      "source_node": "INMAA_AIR",
+      "target_node": "SGSIN_AIR",
+      "mode": "air",
+      "distance_km": 2920.0,
+      "travel_time_hr": 3.946,
+      "base_cost_usd": 4526.0,
+      "emission_factor_kg_per_tonne_km": 0.602,
+      "reliability": 0.92,
+      "risk": 0.08
+    },
+    {
+      "edge_id": "E010",
+      "source_node": "INBLR_AIR",
+      "target_node": "SGSIN_AIR",
+      "mode": "air",
+      "distance_km": 3180.0,
+      "travel_time_hr": 4.297,
+      "base_cost_usd": 4929.0,
+      "emission_factor_kg_per_tonne_km": 0.602,
+      "reliability": 0.91,
+      "risk": 0.09
+    },
+    {
+      "edge_id": "E011",
+      "source_node": "SGSIN_PORT",
+      "target_node": "SGSIN_AIR",
+      "mode": "truck",
+      "distance_km": 25.758,
+      "travel_time_hr": 0.5,
+      "base_cost_usd": 25.0,
+      "emission_factor_kg_per_tonne_km": 0.092,
+      "reliability": 0.96,
+      "risk": 0.04
+    },
+    {
+      "edge_id": "E012",
+      "source_node": "SGSIN_PORT",
+      "target_node": "MYKUL_RAIL",
+      "mode": "rail",
+      "distance_km": 360.0,
+      "travel_time_hr": 8.182,
+      "base_cost_usd": 64.8,
+      "emission_factor_kg_per_tonne_km": 0.024,
+      "reliability": 0.85,
+      "risk": 0.15
+    },
+    {
+      "edge_id": "E013",
+      "source_node": "MYKUL_RAIL",
+      "target_node": "THBKK_HUB",
+      "mode": "rail",
+      "distance_km": 1460.0,
+      "travel_time_hr": 33.182,
+      "base_cost_usd": 262.8,
+      "emission_factor_kg_per_tonne_km": 0.024,
+      "reliability": 0.76,
+      "risk": 0.24
+    },
+    {
+      "edge_id": "E014",
+      "source_node": "THBKK_HUB",
+      "target_node": "VNSGN_PORT",
+      "mode": "truck",
+      "distance_km": 911.45,
+      "travel_time_hr": 15.715,
+      "base_cost_usd": 382.81,
+      "emission_factor_kg_per_tonne_km": 0.092,
+      "reliability": 0.68,
+      "risk": 0.32
+    },
+    {
+      "edge_id": "E015",
+      "source_node": "SGSIN_PORT",
+      "target_node": "VNSGN_PORT",
+      "mode": "sea",
+      "distance_km": 1090.0,
+      "travel_time_hr": 33.03,
+      "base_cost_usd": 98.1,
+      "emission_factor_kg_per_tonne_km": 0.014,
+      "reliability": 0.81,
+      "risk": 0.19
+    },
+    {
+      "edge_id": "E016",
+      "source_node": "VNSGN_PORT",
+      "target_node": "VNHAN_RAIL",
+      "mode": "rail",
+      "distance_km": 1720.0,
+      "travel_time_hr": 39.091,
+      "base_cost_usd": 309.6,
+      "emission_factor_kg_per_tonne_km": 0.024,
+      "reliability": 0.78,
+      "risk": 0.22
+    },
+    {
+      "edge_id": "E017",
+      "source_node": "SGSIN_PORT",
+      "target_node": "JPYOK_PORT",
+      "mode": "sea",
+      "distance_km": 5320.0,
+      "travel_time_hr": 161.212,
+      "base_cost_usd": 478.8,
+      "emission_factor_kg_per_tonne_km": 0.014,
+      "reliability": 0.73,
+      "risk": 0.27
+    },
+    {
+      "edge_id": "E018",
+      "source_node": "VNSGN_PORT",
+      "target_node": "JPYOK_PORT",
+      "mode": "sea",
+      "distance_km": 4380.0,
+      "travel_time_hr": 132.727,
+      "base_cost_usd": 394.2,
+      "emission_factor_kg_per_tonne_km": 0.014,
+      "reliability": 0.71,
+      "risk": 0.29
+    },
+    {
+      "edge_id": "E019",
+      "source_node": "CNSHA_PORT",
+      "target_node": "JPYOK_PORT",
+      "mode": "sea",
+      "distance_km": 1760.0,
+      "travel_time_hr": 53.333,
+      "base_cost_usd": 158.4,
+      "emission_factor_kg_per_tonne_km": 0.014,
+      "reliability": 0.79,
+      "risk": 0.21
+    },
+    {
+      "edge_id": "E020",
+      "source_node": "SGSIN_PORT",
+      "target_node": "CNSHA_PORT",
+      "mode": "sea",
+      "distance_km": 3810.0,
+      "travel_time_hr": 115.455,
+      "base_cost_usd": 342.9,
+      "emission_factor_kg_per_tonne_km": 0.014,
+      "reliability": 0.72,
+      "risk": 0.28
+    },
+    {
+      "edge_id": "E021",
+      "source_node": "JPYOK_PORT",
+      "target_node": "JPTYO_CITY",
+      "mode": "truck",
+      "distance_km": 33.026,
+      "travel_time_hr": 0.569,
+      "base_cost_usd": 25.0,
+      "emission_factor_kg_per_tonne_km": 0.092,
+      "reliability": 0.94,
+      "risk": 0.06
+    },
+    {
+      "edge_id": "E022",
+      "source_node": "JPYOK_PORT",
+      "target_node": "JPTYO_AIR",
+      "mode": "truck",
+      "distance_km": 101.254,
+      "travel_time_hr": 1.746,
+      "base_cost_usd": 42.53,
+      "emission_factor_kg_per_tonne_km": 0.092,
+      "reliability": 0.92,
+      "risk": 0.08
+    },
+    {
+      "edge_id": "E023",
+      "source_node": "JPTYO_AIR",
+      "target_node": "JPTYO_CITY",
+      "mode": "truck",
+      "distance_km": 84.104,
+      "travel_time_hr": 1.45,
+      "base_cost_usd": 35.32,
+      "emission_factor_kg_per_tonne_km": 0.092,
+      "reliability": 0.93,
+      "risk": 0.07
+    },
+    {
+      "edge_id": "E024",
+      "source_node": "SGSIN_AIR",
+      "target_node": "JPTYO_AIR",
+      "mode": "air",
+      "distance_km": 5310.0,
+      "travel_time_hr": 7.176,
+      "base_cost_usd": 8230.5,
+      "emission_factor_kg_per_tonne_km": 0.602,
+      "reliability": 0.9,
+      "risk": 0.1
+    },
+    {
+      "edge_id": "E025",
+      "source_node": "CNHKG_AIR",
+      "target_node": "JPTYO_AIR",
+      "mode": "air",
+      "distance_km": 2900.0,
+      "travel_time_hr": 3.919,
+      "base_cost_usd": 4495.0,
+      "emission_factor_kg_per_tonne_km": 0.602,
+      "reliability": 0.88,
+      "risk": 0.12
+    },
+    {
+      "edge_id": "E026",
+      "source_node": "SGSIN_AIR",
+      "target_node": "CNHKG_AIR",
+      "mode": "air",
+      "distance_km": 2580.0,
+      "travel_time_hr": 3.486,
+      "base_cost_usd": 3999.0,
+      "emission_factor_kg_per_tonne_km": 0.602,
+      "reliability": 0.89,
+      "risk": 0.11
+    },
+    {
+      "edge_id": "E027",
+      "source_node": "VNSGN_PORT",
+      "target_node": "CNHKG_AIR",
+      "mode": "truck",
+      "distance_km": 2443.601,
+      "travel_time_hr": 42.131,
+      "base_cost_usd": 1026.31,
+      "emission_factor_kg_per_tonne_km": 0.092,
+      "reliability": 0.65,
+      "risk": 0.35
+    }
+  ]
+}

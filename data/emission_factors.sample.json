@@ -1,0 +1,19 @@
+{
+  "truck": {
+    "kg_co2e_per_tonne_km": 0.092,
+    "source_note": "Representative freight default; replace with GLEC/Climatiq factor for production."
+  },
+  "rail": {
+    "kg_co2e_per_tonne_km": 0.024,
+    "source_note": "Representative freight default; replace with region-specific rail factor."
+  },
+  "sea": {
+    "kg_co2e_per_tonne_km": 0.014,
+    "source_note": "Representative freight default; replace with vessel/container-specific factor."
+  },
+  "air": {
+    "kg_co2e_per_tonne_km": 0.602,
+    "source_note": "Representative freight default; replace with ICAO or aircraft-specific factor."
+  }
+}
+
