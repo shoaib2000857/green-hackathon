@@ -2,11 +2,26 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import CarbonOffsetPanel from "../../../components/CarbonOffsetPanel.jsx";
 import { API_BASE_URL, Passport, getJSON } from "../../../lib/api";
+
+type OffsetLedgerEntry = {
+  created_at: string;
+  entry_hash: string;
+  label: "Offset";
+};
+
+function makeOffsetHash(totalCO2eKg: number) {
+  return btoa(unescape(encodeURIComponent(`offset:${totalCO2eKg}:${Date.now()}`)))
+    .replace(/=/g, "")
+    .substring(0, 64);
+}
 
 export default function PassportPage() {
   const params = useParams<{ shipmentId: string }>();
   const [passport, setPassport] = useState<Passport | null>(null);
+  const [isOffsetConfirmed, setIsOffsetConfirmed] = useState(false);
+  const [offsetLedgerEntry, setOffsetLedgerEntry] = useState<OffsetLedgerEntry | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -14,7 +29,11 @@ export default function PassportPage() {
       return;
     }
     getJSON<Passport>(`/shipments/${params.shipmentId}/passport`)
-      .then(setPassport)
+      .then((result) => {
+        setPassport(result);
+        setIsOffsetConfirmed(false);
+        setOffsetLedgerEntry(null);
+      })
       .catch((error) => setError(error instanceof Error ? error.message : "Passport not found"));
   }, [params.shipmentId]);
 
@@ -57,6 +76,11 @@ export default function PassportPage() {
               src={`${API_BASE_URL}/shipments/${passport.shipment.shipment_id}/passport/qr`}
             />
             <p className="mt-3 text-sm font-bold capitalize text-moss">{passport.verification_status}</p>
+            {isOffsetConfirmed ? (
+              <p className="mt-2 rounded-full border-[1.5px] border-[#639922] bg-[#EAF3DE] px-3 py-1 text-xs font-medium text-[#3B6D11]">
+                Carbon Neutral ✓
+              </p>
+            ) : null}
           </div>
         </div>
 
@@ -66,6 +90,19 @@ export default function PassportPage() {
           <Metric label="Transit time" value={`${passport.total_time_hr.toFixed(1)} hr`} />
           <Metric label="Ledger entries" value={`${passport.ledger.length}`} />
         </div>
+
+        <CarbonOffsetPanel
+          totalCO2eKg={passport.total_emissions_kg}
+          passportId={passport.shipment.shipment_id}
+          onOffsetConfirmed={() => {
+            setIsOffsetConfirmed(true);
+            setOffsetLedgerEntry({
+              label: "Offset",
+              created_at: new Date().toISOString(),
+              entry_hash: makeOffsetHash(passport.total_emissions_kg)
+            });
+          }}
+        />
 
         <section className="mt-8 rounded-[2rem] bg-ink p-5 text-white">
           <div className="flex items-center justify-between gap-4">
@@ -102,6 +139,15 @@ export default function PassportPage() {
                 <p className="mt-2 break-all font-mono text-xs text-ink/60">{entry.entry_hash}</p>
               </div>
             ))}
+            {offsetLedgerEntry ? (
+              <div key={offsetLedgerEntry.entry_hash} className="rounded-2xl border border-ink/10 bg-white/70 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="font-bold">{offsetLedgerEntry.label}</p>
+                  <p className="text-sm text-ink/50">{new Date(offsetLedgerEntry.created_at).toLocaleString()}</p>
+                </div>
+                <p className="mt-2 break-all font-mono text-xs text-ink/60">{offsetLedgerEntry.entry_hash}</p>
+              </div>
+            ) : null}
           </div>
         </section>
       </section>
