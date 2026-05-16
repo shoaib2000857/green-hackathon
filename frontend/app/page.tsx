@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { API_BASE_URL, Analytics, OptimizeResponse, RouteOption, getJSON, postJSON } from "../lib/api";
 import CarbonPriceCalculator from "../components/CarbonPriceCalculator.jsx";
 import RouteMap from "../components/RouteMap.jsx";
@@ -29,6 +30,21 @@ const modeStyle: Record<string, string> = {
 
 function adjustedCost(option: RouteOption, carbonPrice: number) {
   return option.total_cost_usd + (option.total_emissions_kg / 1000) * carbonPrice;
+}
+
+function buildForecastHref(origin: string, destination: string, weightKg: number, priority: string, mode?: string) {
+  const params = new URLSearchParams({
+    origin,
+    destination,
+    weightKg: String(weightKg),
+    priority
+  });
+
+  if (mode) {
+    params.set("mode", mode === "truck" ? "road" : mode);
+  }
+
+  return `/forecast?${params.toString()}`;
 }
 
 export default function DashboardPage() {
@@ -110,6 +126,7 @@ export default function DashboardPage() {
   }
 
   const route = selectedRoute ?? optimization?.recommendation ?? null;
+  const forecastHref = buildForecastHref(origin, destination, weightKg, priority, route?.legs[0]?.mode);
   const lowestCarbonAdjustedRouteId =
     carbonPrice > 0 && optimization && optimization.route_options.length > 0
       ? optimization.route_options.reduce((best, option) => {
@@ -162,9 +179,23 @@ export default function DashboardPage() {
                   ))}
                 </select>
               </label>
-              <button className="rounded-2xl bg-fern px-5 py-3 font-bold text-ink transition hover:translate-y-[-1px]" disabled={loading}>
-                {loading ? "Optimizing..." : "Optimize route"}
-              </button>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <button className="rounded-2xl bg-fern px-5 py-3 font-bold text-ink transition hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(93,202,165,0.18)]" disabled={loading}>
+                  {loading ? "Optimizing..." : "Optimize route"}
+                </button>
+                <Link
+                  href={forecastHref}
+                  className="group inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-5 py-3 font-bold text-white shadow-[0_12px_28px_rgba(15,31,26,0.18)] transition hover:-translate-y-0.5 hover:border-white/15 hover:bg-white/15 hover:shadow-[0_16px_32px_rgba(93,202,165,0.16)]"
+                >
+                  <span aria-hidden="true" className="text-base leading-none transition group-hover:scale-110">
+                    ⚡
+                  </span>
+                  <span>Emissions Forecast</span>
+                  <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/65">
+                    AI
+                  </span>
+                </Link>
+              </div>
             </div>
           </form>
         </header>

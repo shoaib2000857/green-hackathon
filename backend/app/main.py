@@ -5,6 +5,7 @@ import os
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
+from .forecast_router import router as forecast_router
 from .graph import graph
 from .ledger import ledger
 from .optimizer import optimize_route
@@ -49,6 +50,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(forecast_router)
 
 
 @app.get("/health")
