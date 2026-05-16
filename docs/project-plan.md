@@ -31,7 +31,7 @@ Dashboard and QR passport
 
 ## Next Production Steps
 
-- Add scheduled ingestion for UN/LOCODE, World Port Index, OSM/OSRM, SeaRoutes, Climatiq/GLEC, ICAO, and OpenWeatherMap.
+- Add scheduled ingestion for UN/LOCODE, World Port Index, OSM/OSRM, open-source searoute maritime routing, Climatiq/GLEC, ICAO, and OpenWeatherMap.
 - Replace representative fallback factors with certified GLEC/Climatiq/ICAO factors per lane, vehicle, and region.
 - Move in-memory repositories to PostgreSQL.
 - Add authenticated tenant workspaces for enterprise users.

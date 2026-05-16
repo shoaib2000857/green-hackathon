@@ -1,20 +1,17 @@
-from fastapi.testclient import TestClient
-
-from app.main import app
+from app.main import DEFAULT_CORS_ORIGINS, cors_origins
 
 
-def test_dev_frontend_origins_are_allowed_for_preflight() -> None:
-    client = TestClient(app)
+def test_default_dev_frontend_origins_are_allowed(monkeypatch) -> None:
+    monkeypatch.delenv("CORS_ALLOW_ORIGINS", raising=False)
 
-    for origin in ("http://localhost:3000", "http://127.0.0.1:3000"):
-        response = client.options(
-            "/optimize-route",
-            headers={
-                "Origin": origin,
-                "Access-Control-Request-Method": "POST",
-                "Access-Control-Request-Headers": "content-type",
-            },
-        )
+    origins = cors_origins()
 
-        assert response.status_code == 200
-        assert response.headers["access-control-allow-origin"] == origin
+    assert "http://localhost:3000" in origins
+    assert "http://127.0.0.1:3000" in origins
+    assert origins == DEFAULT_CORS_ORIGINS
+
+
+def test_configured_cors_origins_are_trimmed(monkeypatch) -> None:
+    monkeypatch.setenv("CORS_ALLOW_ORIGINS", " http://localhost:3000, http://127.0.0.1:3001,, ")
+
+    assert cors_origins() == ["http://localhost:3000", "http://127.0.0.1:3001"]

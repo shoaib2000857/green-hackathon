@@ -26,7 +26,7 @@ This document summarizes the current features implemented in the repository: bac
   - Per-leg behavior:
     - Resolve node metadata from the logistics graph to obtain coordinates and human-friendly names.
     - Resolve distance using the best available source:
-      - `sea`: use SeaRoutes API when `SEAROUTES_API_KEY` is configured, otherwise fall back to haversine × 1.25 (approximate sea routing).
+      - `sea`: use the free local `searoute` Python package when installed, otherwise fall back to haversine × 1.25 (approximate sea routing).
       - `road`: use OSRM (`OSRM_BASE_URL`) when available, otherwise use haversine.
       - `air`: use haversine × 1.09; `rail`: use haversine × 1.2.
     - Estimate base emissions:
@@ -41,8 +41,8 @@ This document summarizes the current features implemented in the repository: bac
   - Endpoints exposed:
     - `POST /forecast/emissions` — calculate per-leg forecasts and aggregated totals.
     - `GET /forecast/factors` — return the local `GLEC_FACTORS` fallback table used when external factor estimates are not available.
-    - `GET /forecast/health` — simple health + integration flags (`CLIMATIQ_API_KEY`, `SEAROUTES_API_KEY`, `OPENWEATHER_API_KEY`).
-  - Environment variables that influence behavior: `CLIMATIQ_API_KEY`, `SEAROUTES_API_KEY`, `OSRM_BASE_URL`, `OPENWEATHER_API_KEY`.
+    - `GET /forecast/health` — simple health + integration flags (`CLIMATIQ_API_KEY`, local `searoute` availability, `OPENWEATHER_API_KEY`).
+  - Environment variables that influence behavior: `CLIMATIQ_API_KEY`, `OSRM_BASE_URL`, `OPENWEATHER_API_KEY`.
   - Default local `GLEC_FACTORS` used as fallbacks (implemented in code):
     - `sea`: diesel 0.011 kg/tkm, marine_diesel 0.013, lng 0.008
     - `road`: diesel 0.096 kg/tkm, electric 0.040
@@ -105,7 +105,7 @@ This document summarizes the current features implemented in the repository: bac
   - `LLM_TEMPERATURE` — temperature for LLM generation (default `0.1`).
   - `OPENAI_API_KEY` — set to enable OpenAI provider; `OPENAI_MODEL` default `gpt-4.1-mini`.
 - **Graph ingestion**: `USE_INGESTED_GRAPH`, `LOGISTICS_GRAPH_PATH`.
-- **Networking & integrations**: `CORS_ALLOW_ORIGINS`, `PUBLIC_FRONTEND_URL`, `OSRM_BASE_URL`, `CLIMATIQ_API_KEY`, `SEAROUTES_API_KEY`, `OPENWEATHER_API_KEY` (used only for metadata flags; see `GET /data-sources/status`).
+- **Networking & integrations**: `CORS_ALLOW_ORIGINS`, `PUBLIC_FRONTEND_URL`, `OSRM_BASE_URL`, `CLIMATIQ_API_KEY`, `OPENWEATHER_API_KEY`, and local `searoute` package availability (see `GET /data-sources/status`).
 
 ## Developer hints — how to run locally
 

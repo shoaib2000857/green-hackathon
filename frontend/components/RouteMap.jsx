@@ -8,20 +8,46 @@ const TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
 const TILE_ATTRIBUTION = "&copy; OpenStreetMap &copy; CARTO";
 const LEG_DURATION_MS = 1200;
 
-const portCoordinates = {
-  chennai: { name: "Chennai Port", lat: 13.0827, lng: 80.2707 },
-  singapore: { name: "Port of Singapore", lat: 1.2897, lng: 103.8501 },
-  yokohama: { name: "Port of Yokohama", lat: 35.4437, lng: 139.638 },
-  tokyo: { name: "Tokyo Air Cargo / Narita", lat: 35.772, lng: 140.3929 },
-  narita: { name: "Tokyo Air Cargo / Narita", lat: 35.772, lng: 140.3929 },
-  shanghai: { name: "Port of Shanghai", lat: 31.2304, lng: 121.4737 },
-  mumbai: { name: "Port of Mumbai", lat: 18.9322, lng: 72.8375 },
-  colombo: { name: "Port of Colombo", lat: 6.9319, lng: 79.8478 },
-  bangkok: { name: "Port of Bangkok", lat: 13.69, lng: 100.5731 },
-  "hong kong": { name: "Port of Hong Kong", lat: 22.3193, lng: 114.1694 },
-  busan: { name: "Port of Busan", lat: 35.1796, lng: 129.0756 },
-  jakarta: { name: "Port of Jakarta", lat: 6.1, lng: 106.8 }
+const waypointCoordinates = {
+  "chennai port": { name: "Chennai Port", lat: 13.095, lng: 80.309 },
+  "chennai air cargo": { name: "Chennai Air Cargo", lat: 12.994, lng: 80.17 },
+  "bengaluru air cargo": { name: "Bengaluru Air Cargo", lat: 13.198, lng: 77.706 },
+  "delhi rail logistics hub": { name: "Delhi Rail Logistics Hub", lat: 28.644, lng: 77.216 },
+  "nhava sheva port": { name: "Nhava Sheva Port", lat: 18.949, lng: 72.952 },
+  "colombo port": { name: "Colombo Port", lat: 6.948, lng: 79.844 },
+  "port of singapore": { name: "Port of Singapore", lat: 1.265, lng: 103.82 },
+  "changi air cargo": { name: "Changi Air Cargo", lat: 1.364, lng: 103.991 },
+  "kuala lumpur inland terminal": { name: "Kuala Lumpur Inland Terminal", lat: 3.139, lng: 101.687 },
+  "bangkok logistics hub": { name: "Bangkok Logistics Hub", lat: 13.756, lng: 100.501 },
+  "ho chi minh port": { name: "Ho Chi Minh Port", lat: 10.776, lng: 106.7 },
+  "hanoi rail terminal": { name: "Hanoi Rail Terminal", lat: 21.028, lng: 105.834 },
+  "port of yokohama": { name: "Port of Yokohama", lat: 35.443, lng: 139.638 },
+  "tokyo air cargo": { name: "Tokyo Air Cargo", lat: 35.772, lng: 140.392 },
+  "tokyo distribution center": { name: "Tokyo Distribution Center", lat: 35.676, lng: 139.65 },
+  "shanghai port": { name: "Shanghai Port", lat: 31.23, lng: 121.473 },
+  "hong kong air cargo": { name: "Hong Kong Air Cargo", lat: 22.308, lng: 113.918 },
+  chennai: { name: "Chennai Port", lat: 13.095, lng: 80.309 },
+  singapore: { name: "Port of Singapore", lat: 1.265, lng: 103.82 },
+  yokohama: { name: "Port of Yokohama", lat: 35.443, lng: 139.638 },
+  tokyo: { name: "Tokyo Air Cargo", lat: 35.772, lng: 140.392 },
+  narita: { name: "Tokyo Air Cargo", lat: 35.772, lng: 140.392 },
+  shanghai: { name: "Shanghai Port", lat: 31.23, lng: 121.473 },
+  mumbai: { name: "Nhava Sheva Port", lat: 18.949, lng: 72.952 },
+  colombo: { name: "Colombo Port", lat: 6.948, lng: 79.844 },
+  bangkok: { name: "Bangkok Logistics Hub", lat: 13.756, lng: 100.501 },
+  "hong kong": { name: "Hong Kong Air Cargo", lat: 22.308, lng: 113.918 },
+  busan: { name: "Port of Yokohama", lat: 35.443, lng: 139.638 },
+  jakarta: { name: "Bangkok Logistics Hub", lat: 13.756, lng: 100.501 }
 };
+
+const modeVisuals = {
+  sea: { label: "Sea", color: "#5DCAA5", weight: 2.5, dashArray: "8,6" },
+  rail: { label: "Rail", color: "#8AAB4A", weight: 2.5, dashArray: "2,8" },
+  truck: { label: "Truck", color: "#EF9F27", weight: 2.3, dashArray: null },
+  air: { label: "Air", color: "#9CCBFF", weight: 2.3, dashArray: "4,10" }
+};
+
+const defaultModeVisual = { label: "Other", color: "#CBD5E1", weight: 2.3, dashArray: null };
 
 let leafletPromise;
 
@@ -67,20 +93,25 @@ function normalizeName(value) {
   return value.toLowerCase().replace(/[^a-z\s]/g, " ");
 }
 
-function matchPort(value) {
+function matchWaypoint(value) {
   const normalized = normalizeName(value);
-  const match = Object.entries(portCoordinates).find(([city]) => normalized.includes(city));
+  const exact = waypointCoordinates[normalized];
+  if (exact) {
+    return exact;
+  }
+
+  const match = Object.entries(waypointCoordinates).find(([city]) => normalized.includes(city));
   return match ? match[1] : null;
 }
 
 function waypointForLegName(name) {
-  const port = matchPort(name);
-  if (!port) {
+  const waypoint = matchWaypoint(name);
+  if (!waypoint) {
     console.warn(`Route map skipped unmatched waypoint: ${name}`);
     return null;
   }
 
-  return { ...port, sourceName: name };
+  return { ...waypoint, sourceName: name };
 }
 
 function buildRouteSegments(legs) {
@@ -190,10 +221,13 @@ export default function RouteMap({ legs, totalCO2e }) {
           const legend = L.control({ position: "bottomleft" });
           legend.onAdd = () => {
             const element = L.DomUtil.create("div", "route-map-legend");
-            element.innerHTML = `
-              <div><span class="route-map-legend-line route-map-legend-sea"></span>Sea</div>
-              <div><span class="route-map-legend-line route-map-legend-truck"></span>Truck</div>
-            `;
+            element.innerHTML = Object.entries(modeVisuals)
+              .map(
+                ([mode, visual]) => `
+                  <div><span class="route-map-legend-line route-map-legend-${mode}" style="background:${visual.color};"></span>${visual.label}</div>
+                `
+              )
+              .join("");
             return element;
           };
           legend.addTo(mapRef.current);
@@ -263,6 +297,8 @@ export default function RouteMap({ legs, totalCO2e }) {
               return;
             }
 
+            const visual = modeVisuals[segment.mode] ?? defaultModeVisual;
+
             const points =
               segment.mode === "sea"
                 ? greatCirclePoints(segment.from, segment.to)
@@ -271,10 +307,10 @@ export default function RouteMap({ legs, totalCO2e }) {
                     [segment.to.lat, segment.to.lng]
                   ];
             const polyline = L.polyline([], {
-              color: segment.mode === "sea" ? "#5DCAA5" : "#EF9F27",
-              weight: segment.mode === "sea" ? 2.5 : 2,
+              color: visual.color,
+              weight: visual.weight,
               opacity: 0.95,
-              dashArray: segment.mode === "sea" ? "8,6" : null,
+              dashArray: visual.dashArray,
               lineCap: "round"
             }).addTo(layersRef.current);
             const startedAt = performance.now();

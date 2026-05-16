@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
+load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
+
 from .forecast_router import router as forecast_router
+from .forecaster import searoute_available
 from .graph import graph
 from .ledger import ledger
 from .optimizer import optimize_route
@@ -73,7 +78,7 @@ def data_sources_status() -> dict[str, object]:
         "external_api_config": {
             "osrm_base_url": os.getenv("OSRM_BASE_URL", "https://router.project-osrm.org"),
             "climatiq_configured": bool(os.getenv("CLIMATIQ_API_KEY")),
-            "searoutes_configured": bool(os.getenv("SEAROUTES_API_KEY")),
+            "searoute_available": searoute_available(),
             "openweather_configured": bool(os.getenv("OPENWEATHER_API_KEY")),
             "ollama_configured": os.getenv("LLM_PROVIDER", "ollama") == "ollama",
         },

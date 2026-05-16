@@ -4,7 +4,7 @@ import os
 
 from fastapi import APIRouter
 
-from .forecaster import ForecastRequest, ForecastResponse, GLEC_FACTORS, forecast_emissions
+from .forecaster import ForecastRequest, ForecastResponse, GLEC_FACTORS, forecast_emissions, searoute_available
 
 router = APIRouter(prefix="/forecast", tags=["forecast"])
 
@@ -24,6 +24,6 @@ async def forecast_health() -> dict[str, bool | str]:
     return {
         "status": "ok",
         "climatiq_configured": bool(os.getenv("CLIMATIQ_API_KEY")),
-        "searoutes_configured": bool(os.getenv("SEAROUTES_API_KEY")),
+        "searoute_available": searoute_available(),
         "openweather_configured": bool(os.getenv("OPENWEATHER_API_KEY")),
     }

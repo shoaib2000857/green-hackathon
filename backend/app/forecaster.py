@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib.util
 import math
 import os
 from datetime import UTC, datetime
@@ -60,13 +61,17 @@ GLEC_FACTORS = {
 }
 
 CLIMATIQ_ACTIVITY_IDS = {
-    "sea": "freight_vehicle-vehicle_type_container_ship-fuel_source_na-distance_na-weight_na",
-    "road": "freight_vehicle-vehicle_type_hgv-fuel_source_diesel-distance_na-weight_na",
-    "air": "freight_vehicle-vehicle_type_cargo_plane-fuel_source_na-distance_na-weight_na",
-    "rail": "freight_vehicle-vehicle_type_freight_train-fuel_source_diesel-distance_na-weight_na",
+    "sea": "sea_freight-vessel_type_bulk_carrier-route_type_na-vessel_length_na-tonnage_gt_100dwkt-fuel_source_mgo-distance_uplift_excluded",
+    "road": "freight_vehicle-vehicle_type_hgv-fuel_source_na-vehicle_weight_gt_20t-distance_basis_sfd",
+    "air": "freight_flight-route_type_na-distance_long_haul_gt_3700km-weight_na-rf_excluded-method_en16258-aircraft_type_belly_freight-distance_uplift_excluded",
+    "rail": "freight_train-route_type_na-fuel_type_diesel-load_type_container-distance_basis_sfd",
 }
 
 CONFIDENCE_RANK = {"high": 0, "medium": 1, "low": 2}
+
+
+def searoute_available() -> bool:
+    return importlib.util.find_spec("searoute") is not None
 
 
 def load_factor_correction(load_pct: float) -> float:
@@ -107,11 +112,6 @@ def _lat_lon(attrs: dict[str, Any]) -> tuple[float, float]:
     return float(lat), float(lon)
 
 
-def _locode(attrs: dict[str, Any]) -> str:
-    node_id = str(attrs.get("node_id", ""))
-    return node_id.split("_", 1)[0]
-
-
 def _haversine_km(origin: dict[str, Any], destination: dict[str, Any]) -> float:
     lat1, lon1 = _lat_lon(origin)
     lat2, lon2 = _lat_lon(destination)
@@ -125,18 +125,24 @@ def _haversine_km(origin: dict[str, Any], destination: dict[str, Any]) -> float:
 
 
 async def _resolve_sea_distance(client: httpx.AsyncClient, origin: dict[str, Any], destination: dict[str, Any]) -> tuple[float, str]:
-    api_key = os.getenv("SEAROUTES_API_KEY")
-    if api_key:
-        try:
-            url = f"https://api.searoutes.com/route/v2/sea/{_locode(origin)}/{_locode(destination)}"
-            response = await client.get(url, params={"speed": 14}, headers={"x-api-key": api_key}, timeout=10.0)
-            response.raise_for_status()
-            distance_km = float(response.json()["distanceKM"])
-            if distance_km > 0:
-                return distance_km, "searoutes"
-        except Exception:
-            pass
+    distance_km = _searoute_distance_km(origin, destination)
+    if distance_km:
+        return distance_km, "searoute_local"
     return _haversine_km(origin, destination) * 1.25, "haversine_fallback"
+
+
+def _searoute_distance_km(origin: dict[str, Any], destination: dict[str, Any]) -> float | None:
+    try:
+        import searoute as sr
+
+        origin_lat, origin_lon = _lat_lon(origin)
+        destination_lat, destination_lon = _lat_lon(destination)
+        route = sr.searoute([origin_lon, origin_lat], [destination_lon, destination_lat], units="km")
+        properties = getattr(route, "properties", None) or route.get("properties", {})
+        length = float(properties["length"])
+        return length if length > 0 else None
+    except Exception:
+        return None
 
 
 async def _resolve_road_distance(client: httpx.AsyncClient, origin: dict[str, Any], destination: dict[str, Any]) -> tuple[float, str]:
@@ -179,7 +185,11 @@ async def estimate_base_emissions(client: httpx.AsyncClient, leg: ForecastLeg, d
                 "https://api.climatiq.io/data/v1/estimate",
                 headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
                 json={
-                    "emission_factor": {"activity_id": activity_id, "source": "GLEC"},
+                    "emission_factor": {
+                        "activity_id": activity_id,
+                        "source": "GLEC",
+                        "data_version": os.getenv("CLIMATIQ_DATA_VERSION", "33.33"),
+                    },
                     "parameters": {
                         "distance": distance_km,
                         "weight": tonnes,

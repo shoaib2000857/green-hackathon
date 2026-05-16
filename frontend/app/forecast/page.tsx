@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -65,7 +65,7 @@ const confidenceClass: Record<Confidence, string> = {
 };
 
 const distanceSourceLabels: Record<string, string> = {
-  searoutes: "SeaRoutes API",
+  searoute_local: "searoute package",
   osrm: "OSRM routing",
   formula: "Great-circle formula",
   haversine_fallback: "Haversine estimate (fallback)"
@@ -81,7 +81,7 @@ const defaultFactors: Factors = {
 type DataSourceRow = {
   sourceName: string;
   usedFor: string;
-  status: "Active" | "Fallback";
+  status: "Active" | "Fallback" | "Not used";
   note: string;
 };
 
@@ -153,8 +153,12 @@ function buildInitialLeg(query: string): ForecastLegInput {
   };
 }
 
-function buildDataSourceRows(forecast: ForecastResponse): DataSourceRow[] {
-  const seaActive = forecast.legs.some((leg) => leg.distance_source === "searoutes");
+function buildDataSourceRows(forecast: ForecastResponse, submittedLegs: ForecastLegInput[]): DataSourceRow[] {
+  const hasSeaLeg = forecast.legs.some((leg) => leg.mode === "sea");
+  const hasRoadLeg = forecast.legs.some((leg) => leg.mode === "road");
+  const weatherRequested = submittedLegs.some((leg) => Boolean(leg.departure_date));
+
+  const seaActive = forecast.legs.some((leg) => leg.distance_source === "searoute_local");
   const roadActive = forecast.legs.some((leg) => leg.distance_source === "osrm");
   const climatiqActive = forecast.legs.some((leg) => leg.emission_factor_source === "climatiq");
   const weatherActive = forecast.legs.some((leg) => leg.weather_context !== null);
@@ -166,16 +170,24 @@ function buildDataSourceRows(forecast: ForecastResponse): DataSourceRow[] {
 
   return [
     {
-      sourceName: "SeaRoutes API",
-      usedFor: "Sea leg distance resolution",
-      status: seaActive ? "Active" : "Fallback",
-      note: seaFallback ? "Set SEAROUTES_API_KEY to enable verified sea routing." : "Verified routing is active for sea legs."
+      sourceName: "searoute open-source package",
+      usedFor: "Offline sea leg distance resolution",
+      status: seaActive ? "Active" : hasSeaLeg ? "Fallback" : "Not used",
+      note: !hasSeaLeg
+        ? "Add a sea leg to use local maritime routing."
+        : seaFallback
+          ? "Install backend requirements to enable the free local searoute package."
+          : "Free local maritime routing is active for sea legs."
     },
     {
       sourceName: "OSRM routing",
       usedFor: "Road leg distance resolution",
-      status: roadActive ? "Active" : "Fallback",
-      note: roadFallback ? "Set OSRM_BASE_URL or connect a routing service for verified road distances." : "Verified routing is active for road legs."
+      status: roadActive ? "Active" : hasRoadLeg ? "Fallback" : "Not used",
+      note: !hasRoadLeg
+        ? "Add a road leg to use OSRM routing."
+        : roadFallback
+          ? "Set OSRM_BASE_URL or connect a routing service for verified road distances."
+          : "Verified routing is active for road legs."
     },
     {
       sourceName: "Climatiq GLEC factors",
@@ -186,8 +198,12 @@ function buildDataSourceRows(forecast: ForecastResponse): DataSourceRow[] {
     {
       sourceName: "OpenWeatherMap",
       usedFor: "Weather context for departure-date-sensitive uncertainty",
-      status: weatherActive ? "Active" : "Fallback",
-      note: weatherFallback ? "Set OPENWEATHER_API_KEY and provide a departure date for weather-adjusted estimates." : "Weather context is active for at least one leg."
+      status: weatherActive ? "Active" : weatherRequested ? "Fallback" : "Not used",
+      note: !weatherRequested
+        ? "Provide a departure date to request weather-adjusted estimates."
+        : weatherFallback
+          ? "Set OPENWEATHER_API_KEY for weather-adjusted estimates."
+          : "Weather context is active for at least one leg."
     }
   ];
 }
@@ -236,7 +252,7 @@ function buildConfidenceDetails(forecast: ForecastResponse | null, submittedLegs
         : "Verified emission factors are already active."
     },
     {
-      label: "Set SEAROUTES_API_KEY for accurate sea distances (+precision)",
+      label: "Install searoute package for local sea distances (+precision)",
       done: !forecast.legs.some((leg) => isFallbackDistanceSource(leg.distance_source)),
       note: forecast.legs.some((leg) => isFallbackDistanceSource(leg.distance_source))
         ? "One or more legs used a fallback distance estimate."
@@ -271,6 +287,22 @@ function buildConfidenceDetails(forecast: ForecastResponse | null, submittedLegs
 }
 
 export default function ForecastPage() {
+  return (
+    <Suspense fallback={<ForecastLoading />}>
+      <ForecastPageContent />
+    </Suspense>
+  );
+}
+
+function ForecastLoading() {
+  return (
+    <main className="grid min-h-screen place-items-center p-6">
+      <div className="rounded-[2rem] bg-white/80 p-8 shadow-panel">Loading forecast builder...</div>
+    </main>
+  );
+}
+
+function ForecastPageContent() {
   const searchParams = useSearchParams();
   const query = searchParams.toString();
   const initialLeg = useMemo(() => buildInitialLeg(query), [query]);
@@ -323,7 +355,7 @@ export default function ForecastPage() {
   }, [forecast]);
 
   const totalWeight = useMemo(() => legs.reduce((sum, leg) => sum + Number(leg.weight_kg || 0), 0), [legs]);
-  const dataSourceRows = useMemo(() => (forecast ? buildDataSourceRows(forecast) : []), [forecast]);
+  const dataSourceRows = useMemo(() => (forecast ? buildDataSourceRows(forecast, submittedLegs) : []), [forecast, submittedLegs]);
   const confidenceDetails = useMemo(() => buildConfidenceDetails(forecast, submittedLegs), [forecast, submittedLegs]);
 
   function updateLeg(id: string, patch: Partial<ForecastLegInput>) {
@@ -393,7 +425,7 @@ export default function ForecastPage() {
             {showInfoBanner ? (
               <div className="mt-4 flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 shadow-sm">
                 <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-semibold text-sky-700">i</span>
-                <p className="flex-1 leading-6">Estimates use the GLEC Framework (ISO 14083-aligned) emission factors. Connect Climatiq and SeaRoutes API keys in your .env for higher-accuracy results.</p>
+                <p className="flex-1 leading-6">Estimates use the GLEC Framework (ISO 14083-aligned) emission factors. Install the free searoute package and connect Climatiq in your .env for higher-accuracy results.</p>
                 <button type="button" onClick={() => setShowInfoBanner(false)} className="rounded-full px-2 py-1 text-base font-semibold text-sky-700 transition hover:bg-sky-100" aria-label="Dismiss information banner">
                   ×
                 </button>
@@ -599,7 +631,11 @@ export default function ForecastPage() {
                               <p className="text-xs text-ink/55 mt-1">{row.usedFor}</p>
                             </div>
                             <span className={`shrink-0 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap ${
-                              row.status === "Active" ? "bg-emerald-100/60 text-emerald-700" : "bg-amber-100/60 text-amber-700"
+                              row.status === "Active"
+                                ? "bg-emerald-100/60 text-emerald-700"
+                                : row.status === "Fallback"
+                                  ? "bg-amber-100/60 text-amber-700"
+                                  : "bg-stone-100/80 text-ink/50"
                             }`}>
                               {row.status}
                             </span>

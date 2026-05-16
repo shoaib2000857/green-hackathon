@@ -65,7 +65,7 @@ Open `http://localhost:3000`. The frontend expects the API at `http://localhost:
 ## MVP Assumptions
 
 - Logistics nodes and lanes load from `data/logistics_graph.json` when generated, otherwise from the built-in demo graph.
-- `scripts/ingest_logistics_data.py` can merge local UN/LOCODE and World Port Index exports, optional OSRM/SeaRoutes/OpenWeatherMap calls, and local emission factor files.
+- `scripts/ingest_logistics_data.py` can merge local UN/LOCODE and World Port Index exports, local searoute maritime distances, optional OSRM/OpenWeatherMap calls, and local emission factor files.
 - Emission factors remain representative defaults unless replaced with certified GLEC/Climatiq/ICAO-backed values.
 - Persistence is in-memory for speed. PostgreSQL schema is included in `docs/database.sql`.
 - The ledger is a PostgreSQL-ready hash-chain design implemented in-memory for this MVP.
@@ -88,4 +88,4 @@ PYTHONPATH=backend python scripts/ingest_logistics_data.py \
   --enable-apis
 ```
 
-API enrichment is opt-in. `--enable-apis` uses `OSRM_BASE_URL` for truck routing, `SEAROUTES_API_KEY` for maritime distances, and `OPENWEATHER_API_KEY` for weather risk when configured.
+API enrichment is opt-in. `--enable-apis` uses `OSRM_BASE_URL` for truck routing and `OPENWEATHER_API_KEY` for weather risk when configured. Maritime distances use the free local `searoute` Python package from backend requirements, with haversine fallback when unavailable.

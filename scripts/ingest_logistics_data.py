@@ -180,11 +180,11 @@ def enrich_edge(
         if routed:
             distance = routed
             api_sources.append("OSRM")
-    elif enable_apis and edge.mode == TransportMode.sea:
-        routed = searoutes_distance_km(source, target)
+    elif edge.mode == TransportMode.sea:
+        routed = searoute_distance_km(source, target)
         if routed:
             distance = routed
-            api_sources.append("SeaRoutes")
+            api_sources.append("searoute-py local")
     elif not distance:
         distance = heuristic_distance_km(source, target, edge.mode)
 
@@ -219,22 +219,20 @@ def osrm_distance_km(source: Node, target: Node) -> float | None:
     return None
 
 
-def searoutes_distance_km(source: Node, target: Node) -> float | None:
-    api_key = os.getenv("SEAROUTES_API_KEY")
-    if not api_key:
-        return None
-    base_url = os.getenv("SEAROUTES_BASE_URL", "https://api.searoutes.com").rstrip("/")
-    url = f"{base_url}/route/v2/sea/{source.longitude},{source.latitude};{target.longitude},{target.latitude}"
+def searoute_distance_km(source: Node, target: Node) -> float | None:
     try:
-        response = httpx.get(url, headers={"x-api-key": api_key}, timeout=30)
-        response.raise_for_status()
-        data = response.json()
-        distance = data.get("properties", {}).get("distance")
-        if distance:
-            return float(distance) / 1000
+        import searoute as sr
+
+        route = sr.searoute(
+            [source.longitude, source.latitude],
+            [target.longitude, target.latitude],
+            units="km",
+        )
+        properties = getattr(route, "properties", None) or route.get("properties", {})
+        distance = float(properties["length"])
+        return distance if distance > 0 else None
     except Exception:
         return None
-    return None
 
 
 def estimate_risk(edge: Edge, source: Node, target: Node, enable_apis: bool, api_sources: list[str]) -> float:
@@ -371,4 +369,3 @@ def slug_node_id(country: str, name: str, suffix: str) -> str:
 
 if __name__ == "__main__":
     main()
-
