@@ -21,6 +21,21 @@ from .schemas import (
     ShipmentCreateRequest,
 )
 
+DEFAULT_CORS_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+]
+
+
+def cors_origins() -> list[str]:
+    configured_origins = os.getenv("CORS_ALLOW_ORIGINS")
+    if not configured_origins:
+        return DEFAULT_CORS_ORIGINS
+    return [origin.strip() for origin in configured_origins.split(",") if origin.strip()]
+
+
 app = FastAPI(
     title="Carbon Passport AI",
     version="0.1.0",
@@ -29,7 +44,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("CORS_ALLOW_ORIGINS", "http://localhost:3000").split(","),
+    allow_origins=cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

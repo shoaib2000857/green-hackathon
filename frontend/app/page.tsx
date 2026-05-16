@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { API_BASE_URL, Analytics, OptimizeResponse, RouteOption, getJSON, postJSON } from "../lib/api";
+import CarbonPriceCalculator from "../components/CarbonPriceCalculator.jsx";
 
 const priorities = [
   { value: "balanced", label: "Balanced" },
@@ -25,6 +26,10 @@ const modeStyle: Record<string, string> = {
   air: "bg-ink text-white"
 };
 
+function adjustedCost(option: RouteOption, carbonPrice: number) {
+  return option.total_cost_usd + (option.total_emissions_kg / 1000) * carbonPrice;
+}
+
 export default function DashboardPage() {
   const [origin, setOrigin] = useState(defaultDemo.origin);
   const [destination, setDestination] = useState(defaultDemo.destination);
@@ -34,6 +39,7 @@ export default function DashboardPage() {
   const [selectedRoute, setSelectedRoute] = useState<RouteOption | null>(null);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [passportUrl, setPassportUrl] = useState<string | null>(null);
+  const [carbonPrice, setCarbonPrice] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -49,6 +55,7 @@ export default function DashboardPage() {
         });
         setOptimization(result);
         setSelectedRoute(result.recommendation);
+        setCarbonPrice(0);
       } catch (error) {
         setError(error instanceof Error ? error.message : "Route optimization failed");
       } finally {
@@ -64,6 +71,7 @@ export default function DashboardPage() {
     setLoading(true);
     setError(null);
     setPassportUrl(null);
+    setCarbonPrice(0);
     try {
       const result = await postJSON<OptimizeResponse, unknown>("/optimize-route", {
         origin,
@@ -101,6 +109,12 @@ export default function DashboardPage() {
   }
 
   const route = selectedRoute ?? optimization?.recommendation ?? null;
+  const lowestCarbonAdjustedRouteId =
+    carbonPrice > 0 && optimization && optimization.route_options.length > 0
+      ? optimization.route_options.reduce((best, option) => {
+          return adjustedCost(option, carbonPrice) < adjustedCost(best, carbonPrice) ? option : best;
+        }, optimization.route_options[0])?.route_id
+      : null;
 
   return (
     <main className="relative min-h-screen overflow-hidden px-5 py-6 md:px-10">
@@ -212,6 +226,15 @@ export default function DashboardPage() {
         ) : null}
 
         {optimization ? (
+          <CarbonPriceCalculator
+            routes={optimization.route_options}
+            recommendedRoute={optimization.recommendation}
+            carbonPrice={carbonPrice}
+            onCarbonPriceChange={setCarbonPrice}
+          />
+        ) : null}
+
+        {optimization ? (
           <section className="mt-6">
             <div className="mb-4 flex items-end justify-between gap-4">
               <div>
@@ -229,12 +252,19 @@ export default function DashboardPage() {
                     selectedRoute?.route_id === option.route_id
                       ? "border-moss bg-white shadow-panel"
                       : "border-white/60 bg-white/55 backdrop-blur"
-                  }`}
+                  } ${carbonPrice > 0 && lowestCarbonAdjustedRouteId === option.route_id ? "border-l-[3px] border-l-[#5DCAA5]" : ""}`}
                 >
                   <p className="text-sm font-bold uppercase tracking-[0.18em] text-moss">{option.strategy.replaceAll("_", " ")}</p>
                   <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
                     <span>{option.total_emissions_kg.toFixed(1)} kg CO2e</span>
-                    <span>${option.total_cost_usd.toLocaleString()}</span>
+                    <span>
+                      ${option.total_cost_usd.toLocaleString()}
+                      {carbonPrice > 0 ? (
+                        <span className="mt-1 block text-[13px] text-ink/50">
+                          incl. carbon tax: ${Math.round(adjustedCost(option, carbonPrice)).toLocaleString()}
+                        </span>
+                      ) : null}
+                    </span>
                     <span>{option.total_time_hr.toFixed(1)} hr</span>
                     <span>Risk {(option.average_risk * 100).toFixed(0)}%</span>
                   </div>

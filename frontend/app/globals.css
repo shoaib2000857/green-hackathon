@@ -55,3 +55,31 @@ select {
   background: linear-gradient(90deg, #315c3f, #c46f3d, #193f4c);
 }
 
+.carbon-range {
+  height: 12px;
+  cursor: pointer;
+  appearance: none;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, #e8e8e8 0%, #5dcaa5 var(--carbon-fill), transparent var(--carbon-fill)),
+    #e8e8e8;
+  outline: none;
+}
+
+.carbon-range::-webkit-slider-thumb {
+  height: 20px;
+  width: 20px;
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  background: #1a2e2a;
+}
+
+.carbon-range::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border: 0;
+  border-radius: 999px;
+  background: #1a2e2a;
+}
+
