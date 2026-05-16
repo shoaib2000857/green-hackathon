@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { API_BASE_URL, Analytics, OptimizeResponse, RouteOption, getJSON, postJSON } from "../lib/api";
 import CarbonPriceCalculator from "../components/CarbonPriceCalculator.jsx";
+import RouteMap from "../components/RouteMap.jsx";
 
 const priorities = [
   { value: "balanced", label: "Balanced" },
@@ -206,8 +207,8 @@ export default function DashboardPage() {
                 </div>
                 <span className="rounded-full bg-white/10 px-4 py-2 text-sm">{route.legs.length} legs</span>
               </div>
-              <div className="relative mt-8 overflow-hidden rounded-[1.5rem] bg-white/10 p-5">
-                <div className="absolute left-8 right-8 top-1/2 h-1 -translate-y-1/2 rounded-full route-line" />
+              <RouteMap legs={route.legs} totalCO2e={route.total_emissions_kg} />
+              <div className="relative mt-4 overflow-hidden rounded-[1.5rem] bg-white/10 p-5">
                 <div className="relative grid gap-4">
                   {route.legs.map((leg, index) => (
                     <div key={`${leg.from_node}-${leg.to_node}-${index}`} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl bg-white/90 p-3 text-ink">
