@@ -5,8 +5,12 @@ export type Mode = "truck" | "rail" | "sea" | "air";
 export type RouteLeg = {
   from_node: string;
   from_name: string;
+  from_latitude: number;
+  from_longitude: number;
   to_node: string;
   to_name: string;
+  to_latitude: number;
+  to_longitude: number;
   mode: Mode;
   distance_km: number;
   travel_time_hr: number;
@@ -14,6 +18,7 @@ export type RouteLeg = {
   emissions_kg: number;
   risk: number;
   reliability: number;
+  geometry: number[][];
 };
 
 export type RouteOption = {
@@ -100,4 +105,3 @@ export async function getJSON<TResponse>(path: string): Promise<TResponse> {
   }
   return response.json() as Promise<TResponse>;
 }
-

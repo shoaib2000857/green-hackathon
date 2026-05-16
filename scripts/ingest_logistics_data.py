@@ -8,7 +8,9 @@ import math
 import os
 from datetime import UTC, datetime
 from pathlib import Path
+from io import TextIOWrapper
 from typing import Any
+import zipfile
 
 import httpx
 
@@ -50,13 +52,17 @@ def main() -> None:
     parser.add_argument("--output", default=os.getenv("LOGISTICS_GRAPH_PATH", "data/logistics_graph.json"))
     parser.add_argument("--unlocode", default=os.getenv("UNLOCODE_PATH"))
     parser.add_argument("--world-port-index", default=os.getenv("WORLD_PORT_INDEX_PATH"))
+    parser.add_argument("--ourairports", default=os.getenv("OURAIRPORTS_PATH"))
     parser.add_argument("--emission-factors", default=os.getenv("EMISSION_FACTORS_PATH"))
     parser.add_argument("--enable-apis", action="store_true", default=os.getenv("INGEST_ENABLE_APIS", "false").lower() == "true")
     parser.add_argument("--include-external-nodes", action="store_true")
     parser.add_argument("--max-external-nodes", type=int, default=250)
+    parser.add_argument("--generate-network", action="store_true", default=os.getenv("INGEST_GENERATE_NETWORK", "true").lower() == "true")
+    parser.add_argument("--max-neighbors-per-mode", type=int, default=int(os.getenv("INGEST_MAX_NEIGHBORS_PER_MODE", "4")))
     args = parser.parse_args()
 
     nodes = {node.node_id: node for node in NODES}
+    curated_node_ids = set(nodes)
     source_notes: list[str] = ["Built-in curated demo logistics hubs"]
     dataset_counts: dict[str, int] = {}
 
@@ -69,6 +75,11 @@ def main() -> None:
         count = merge_world_port_index(Path(args.world_port_index), nodes, args.include_external_nodes, args.max_external_nodes)
         dataset_counts["world_port_index_rows_used"] = count
         source_notes.append(f"World Port Index local file: {args.world_port_index}")
+
+    if args.ourairports:
+        count = merge_ourairports(Path(args.ourairports), nodes, args.include_external_nodes, args.max_external_nodes)
+        dataset_counts["ourairports_rows_used"] = count
+        source_notes.append(f"OurAirports local file: {args.ourairports}")
 
     factors = load_emission_factors(Path(args.emission_factors)) if args.emission_factors else FALLBACK_FACTORS
     source_notes.append(
@@ -83,6 +94,19 @@ def main() -> None:
         for edge in EDGES
         if edge.source_node in nodes and edge.target_node in nodes
     ]
+
+    if args.generate_network and len(nodes) > len(curated_node_ids):
+        generated_edges = build_generated_edges(
+            nodes,
+            factors,
+            args.enable_apis,
+            api_sources,
+            max_neighbors_per_mode=max(args.max_neighbors_per_mode, 1),
+            existing_edges=edges,
+        )
+        edges.extend(generated_edges)
+        dataset_counts["generated_edges"] = len(generated_edges)
+        source_notes.append("Auto-generated multimodal edges from ingested node coordinates")
 
     metadata = {
         "graph_source": "ingested",
@@ -164,6 +188,48 @@ def merge_world_port_index(path: Path, nodes: dict[str, Node], include_external:
     return count
 
 
+def merge_ourairports(path: Path, nodes: dict[str, Node], include_external: bool, max_external: int) -> int:
+    if not path.exists():
+        return 0
+    count = 0
+    for row in read_rows(path):
+        airport_type = value_for(row, "type")
+        if airport_type not in {"large_airport", "medium_airport", "small_airport"}:
+            continue
+        name = value_for(row, "name")
+        country = value_for(row, "iso_country")
+        ident = value_for(row, "ident")
+        iata_code = value_for(row, "iata_code")
+        lat = parse_float(value_for(row, "latitude_deg"))
+        lon = parse_float(value_for(row, "longitude_deg"))
+        if not name or lat is None or lon is None:
+            continue
+        matched = [
+            node_id
+            for node_id, node in nodes.items()
+            if node.type == "airport" and (node.name.lower() == name.lower() or ident.lower() in node.node_id.lower())
+        ]
+        if matched:
+            for node_id in matched:
+                current = nodes[node_id]
+                nodes[node_id] = current.model_copy(update={"latitude": lat, "longitude": lon, "country": country or current.country})
+            count += 1
+            continue
+        if include_external and count < max_external:
+            code = (iata_code or ident or name[:4]).replace(" ", "").upper()
+            node_id = slug_node_id(country or "AIR", code, "AIR")
+            nodes[node_id] = Node(
+                node_id=node_id,
+                name=name,
+                type="airport",
+                latitude=lat,
+                longitude=lon,
+                country=country or "",
+            )
+            count += 1
+    return count
+
+
 def enrich_edge(
     edge: Edge,
     nodes: dict[str, Node],
@@ -174,16 +240,17 @@ def enrich_edge(
     source = nodes[edge.source_node]
     target = nodes[edge.target_node]
     distance = edge.distance_km
+    geometry = edge.geometry or heuristic_geometry(source, target, edge.mode)
 
     if enable_apis and edge.mode == TransportMode.truck:
-        routed = osrm_distance_km(source, target)
+        routed = osrm_route_data(source, target)
         if routed:
-            distance = routed
+            distance, geometry = routed
             api_sources.append("OSRM")
     elif edge.mode == TransportMode.sea:
-        routed = searoute_distance_km(source, target)
+        routed = searoute_route_data(source, target)
         if routed:
-            distance = routed
+            distance, geometry = routed
             api_sources.append("searoute-py local")
     elif not distance:
         distance = heuristic_distance_km(source, target, edge.mode)
@@ -201,25 +268,27 @@ def enrich_edge(
             "emission_factor_kg_per_tonne_km": factor,
             "risk": round(risk, 4),
             "reliability": round(reliability, 4),
+            "geometry": geometry,
         }
     )
 
 
-def osrm_distance_km(source: Node, target: Node) -> float | None:
+def osrm_route_data(source: Node, target: Node) -> tuple[float, list[list[float]]] | None:
     base_url = os.getenv("OSRM_BASE_URL", "https://router.project-osrm.org").rstrip("/")
     url = f"{base_url}/route/v1/driving/{source.longitude},{source.latitude};{target.longitude},{target.latitude}"
     try:
-        response = httpx.get(url, params={"overview": "false"}, timeout=20)
+        response = httpx.get(url, params={"overview": "full", "geometries": "geojson"}, timeout=20)
         response.raise_for_status()
         routes = response.json().get("routes") or []
         if routes:
-            return float(routes[0]["distance"]) / 1000
+            route = routes[0]
+            return float(route["distance"]) / 1000, route_geometry(route.get("geometry", {}).get("coordinates", []))
     except Exception:
         return None
     return None
 
 
-def searoute_distance_km(source: Node, target: Node) -> float | None:
+def searoute_route_data(source: Node, target: Node) -> tuple[float, list[list[float]]] | None:
     try:
         import searoute as sr
 
@@ -230,7 +299,12 @@ def searoute_distance_km(source: Node, target: Node) -> float | None:
         )
         properties = getattr(route, "properties", None) or route.get("properties", {})
         distance = float(properties["length"])
-        return distance if distance > 0 else None
+        coordinates = (
+            getattr(route, "geometry", None)
+            or route.get("geometry", {})
+        )
+        path = coordinates.get("coordinates", []) if isinstance(coordinates, dict) else []
+        return (distance, route_geometry(path)) if distance > 0 else None
     except Exception:
         return None
 
@@ -247,6 +321,153 @@ def estimate_risk(edge: Edge, source: Node, target: Node, enable_apis: bool, api
     if source.country != target.country and edge.mode in {TransportMode.truck, TransportMode.rail}:
         base += 0.04
     return max(0.02, min(0.45, base))
+
+
+def build_generated_edges(
+    nodes: dict[str, Node],
+    factors: dict[TransportMode, float],
+    enable_apis: bool,
+    api_sources: list[str],
+    *,
+    max_neighbors_per_mode: int,
+    existing_edges: list[Edge],
+) -> list[Edge]:
+    existing_keys = {
+        canonical_edge_key(edge.source_node, edge.target_node, edge.mode)
+        for edge in existing_edges
+    }
+    generated: list[Edge] = []
+    node_list = list(nodes.values())
+
+    truck_nodes = [node for node in node_list if node.type in {"port", "airport", "rail", "inland_terminal", "logistics_hub", "warehouse"}]
+    rail_nodes = [node for node in node_list if node.type in {"rail", "inland_terminal", "logistics_hub"}]
+    air_nodes = [node for node in node_list if node.type == "airport"]
+    sea_nodes = [node for node in node_list if node.type == "port"]
+
+    for source in truck_nodes:
+        add_generated_candidates(
+            generated,
+            existing_keys,
+            nodes,
+            source,
+            truck_nodes,
+            TransportMode.truck,
+            factors,
+            enable_apis,
+            api_sources,
+            max_neighbors_per_mode=max_neighbors_per_mode,
+            predicate=lambda distance_km, target: target.node_id != source.node_id and source.country == target.country and distance_km <= 650,
+        )
+
+    for source in rail_nodes:
+        add_generated_candidates(
+            generated,
+            existing_keys,
+            nodes,
+            source,
+            rail_nodes,
+            TransportMode.rail,
+            factors,
+            enable_apis,
+            api_sources,
+            max_neighbors_per_mode=max_neighbors_per_mode,
+            predicate=lambda distance_km, target: target.node_id != source.node_id and distance_km <= 1800 and (source.country == target.country or distance_km <= 900),
+        )
+
+    for source in air_nodes:
+        add_generated_candidates(
+            generated,
+            existing_keys,
+            nodes,
+            source,
+            air_nodes,
+            TransportMode.air,
+            factors,
+            enable_apis,
+            api_sources,
+            max_neighbors_per_mode=max_neighbors_per_mode,
+            predicate=lambda distance_km, target: target.node_id != source.node_id and distance_km >= 180 and distance_km <= 9000 and source.country != target.country,
+        )
+
+    for source in sea_nodes:
+        add_generated_candidates(
+            generated,
+            existing_keys,
+            nodes,
+            source,
+            sea_nodes,
+            TransportMode.sea,
+            factors,
+            enable_apis,
+            api_sources,
+            max_neighbors_per_mode=max_neighbors_per_mode,
+            predicate=lambda distance_km, target: target.node_id != source.node_id and distance_km >= 150 and source.country != target.country,
+        )
+
+    return generated
+
+
+def add_generated_candidates(
+    generated: list[Edge],
+    existing_keys: set[tuple[str, str, str]],
+    nodes: dict[str, Node],
+    source: Node,
+    targets: list[Node],
+    mode: TransportMode,
+    factors: dict[TransportMode, float],
+    enable_apis: bool,
+    api_sources: list[str],
+    *,
+    max_neighbors_per_mode: int,
+    predicate,
+) -> None:
+    ranked: list[tuple[float, Node]] = []
+    for target in targets:
+        if target.node_id == source.node_id:
+            continue
+        distance_km = heuristic_distance_km(source, target, mode)
+        if predicate(distance_km, target):
+            ranked.append((distance_km, target))
+
+    for distance_km, target in sorted(ranked, key=lambda item: item[0])[:max_neighbors_per_mode]:
+        edge_key = canonical_edge_key(source.node_id, target.node_id, mode)
+        if edge_key in existing_keys:
+            continue
+        edge = Edge(
+            edge_id=generated_edge_id(source.node_id, target.node_id, mode),
+            source_node=source.node_id,
+            target_node=target.node_id,
+            mode=mode,
+            distance_km=round(distance_km, 3),
+            travel_time_hr=max(distance_km / MODE_SPEED_KMH[mode], 0.5),
+            base_cost_usd=max(distance_km * COST_PER_TONNE_KM[mode], 25.0),
+            emission_factor_kg_per_tonne_km=factors.get(mode, FALLBACK_FACTORS[mode]),
+            reliability=0.82,
+            risk=seed_risk(mode, source, target),
+            geometry=heuristic_geometry(source, target, mode),
+        )
+        generated.append(enrich_edge(edge, nodes, factors, enable_apis, api_sources))
+        existing_keys.add(edge_key)
+
+
+def seed_risk(mode: TransportMode, source: Node, target: Node) -> float:
+    base = {
+        TransportMode.truck: 0.15,
+        TransportMode.rail: 0.12,
+        TransportMode.sea: 0.18,
+        TransportMode.air: 0.09,
+    }[mode]
+    cross_border = 0.04 if source.country != target.country and mode in {TransportMode.truck, TransportMode.rail} else 0.0
+    return round(min(0.4, base + cross_border), 4)
+
+
+def canonical_edge_key(source_node: str, target_node: str, mode: TransportMode) -> tuple[str, str, str]:
+    left, right = sorted((source_node, target_node))
+    return left, right, mode.value
+
+
+def generated_edge_id(source_node: str, target_node: str, mode: TransportMode) -> str:
+    return f"GEN_{mode.value.upper()}_{source_node}_{target_node}"[:96]
 
 
 def openweather_risk(node: Node) -> float | None:
@@ -288,6 +509,79 @@ def heuristic_distance_km(source: Node, target: Node, mode: TransportMode) -> fl
     return haversine_km(source.latitude, source.longitude, target.latitude, target.longitude) * MODE_DISTANCE_MULTIPLIER[mode]
 
 
+def heuristic_geometry(source: Node, target: Node, mode: TransportMode) -> list[list[float]]:
+    if mode in {TransportMode.sea, TransportMode.air}:
+        return great_circle_points(source.latitude, source.longitude, target.latitude, target.longitude)
+    if mode == TransportMode.rail:
+        return corridor_points(source.latitude, source.longitude, target.latitude, target.longitude, bend=0.16)
+    return corridor_points(source.latitude, source.longitude, target.latitude, target.longitude, bend=0.08)
+
+
+def corridor_points(
+    source_lat: float,
+    source_lon: float,
+    target_lat: float,
+    target_lon: float,
+    *,
+    bend: float,
+) -> list[list[float]]:
+    mid_lat = (source_lat + target_lat) / 2
+    mid_lon = (source_lon + target_lon) / 2
+    delta_lat = target_lat - source_lat
+    delta_lon = target_lon - source_lon
+    return round_geometry(
+        [
+            [source_lat, source_lon],
+            [mid_lat + (-delta_lon * bend), mid_lon + (delta_lat * bend)],
+            [target_lat, target_lon],
+        ]
+    )
+
+
+def great_circle_points(
+    source_lat: float,
+    source_lon: float,
+    target_lat: float,
+    target_lon: float,
+    steps: int = 28,
+) -> list[list[float]]:
+    lat1 = math.radians(source_lat)
+    lon1 = math.radians(source_lon)
+    lat2 = math.radians(target_lat)
+    lon2 = math.radians(target_lon)
+    delta = 2 * math.asin(
+        math.sqrt(
+            math.sin((lat2 - lat1) / 2) ** 2
+            + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2
+        )
+    )
+    if delta == 0:
+        return [[round(source_lat, 6), round(source_lon, 6)]]
+
+    points: list[list[float]] = []
+    for index in range(steps + 1):
+        fraction = index / steps
+        a = math.sin((1 - fraction) * delta) / math.sin(delta)
+        b = math.sin(fraction * delta) / math.sin(delta)
+        x = a * math.cos(lat1) * math.cos(lon1) + b * math.cos(lat2) * math.cos(lon2)
+        y = a * math.cos(lat1) * math.sin(lon1) + b * math.cos(lat2) * math.sin(lon2)
+        z = a * math.sin(lat1) + b * math.sin(lat2)
+        lat = math.atan2(z, math.sqrt(x * x + y * y))
+        lon = math.atan2(y, x)
+        points.append([math.degrees(lat), math.degrees(lon)])
+    return round_geometry(points)
+
+
+def route_geometry(coordinates: list[list[float]]) -> list[list[float]]:
+    if not coordinates:
+        return []
+    return round_geometry([[point[1], point[0]] for point in coordinates if len(point) >= 2])
+
+
+def round_geometry(points: list[list[float]]) -> list[list[float]]:
+    return [[round(point[0], 6), round(point[1], 6)] for point in points]
+
+
 def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     radius = 6371.0
     phi1 = math.radians(lat1)
@@ -299,6 +593,42 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 def read_rows(path: Path) -> list[dict[str, str]]:
+    if path.suffix.lower() == ".zip":
+        with zipfile.ZipFile(path) as archive:
+            member = next(
+                (
+                    name
+                    for name in archive.namelist()
+                    if not name.endswith("/") and name.lower().endswith((".csv", ".txt"))
+                ),
+                None,
+            )
+            if not member:
+                return []
+            with archive.open(member, "r") as handle:
+                wrapped = TextIOWrapper(handle, encoding="utf-8-sig", newline="")
+                sample = wrapped.read(4096)
+                wrapped.seek(0)
+                delimiter = "\t" if sample.count("\t") > sample.count(",") else ","
+                return list(csv.DictReader(wrapped, delimiter=delimiter))
+
+    if path.suffix.lower() in {".json", ".geojson"}:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        features = payload.get("features", []) if isinstance(payload, dict) else []
+        rows: list[dict[str, str]] = []
+        for feature in features:
+            properties = feature.get("properties", {})
+            geometry = feature.get("geometry", {})
+            coordinates = geometry.get("coordinates", []) if isinstance(geometry, dict) else []
+            row = {str(key): "" if value is None else str(value) for key, value in properties.items()}
+            if len(coordinates) >= 2:
+                row.setdefault("Longitude", str(coordinates[0]))
+                row.setdefault("Latitude", str(coordinates[1]))
+                row.setdefault("lon", str(coordinates[0]))
+                row.setdefault("lat", str(coordinates[1]))
+            rows.append(row)
+        return rows
+
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
         sample = handle.read(4096)
         handle.seek(0)

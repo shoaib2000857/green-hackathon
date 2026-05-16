@@ -65,7 +65,7 @@ Open `http://localhost:3000`. The frontend expects the API at `http://localhost:
 ## MVP Assumptions
 
 - Logistics nodes and lanes load from `data/logistics_graph.json` when generated, otherwise from the built-in demo graph.
-- `scripts/ingest_logistics_data.py` can merge local UN/LOCODE and World Port Index exports, local searoute maritime distances, optional OSRM/OpenWeatherMap calls, and local emission factor files.
+- `scripts/ingest_logistics_data.py` can merge local UN/LOCODE, World Port Index, and OurAirports exports, generate rail/air/sea/truck edges automatically from ingested nodes, enrich road/sea distances with OSRM and `searoute`, and apply local emission factor files.
 - Emission factors remain representative defaults unless replaced with certified GLEC/Climatiq/ICAO-backed values.
 - Persistence is in-memory for speed. PostgreSQL schema is included in `docs/database.sql`.
 - The ledger is a PostgreSQL-ready hash-chain design implemented in-memory for this MVP.
@@ -78,14 +78,22 @@ Build or refresh the runtime logistics graph:
 PYTHONPATH=backend python scripts/ingest_logistics_data.py
 ```
 
+Fetch public source files into `data/raw/`:
+
+```bash
+python scripts/fetch_public_logistics_data.py
+```
+
 Optional dataset/API inputs:
 
 ```bash
 PYTHONPATH=backend python scripts/ingest_logistics_data.py \
   --unlocode /path/to/unlocode.csv \
   --world-port-index /path/to/world_port_index.csv \
+  --ourairports /path/to/airports.csv \
+  --include-external-nodes \
   --emission-factors data/emission_factors.sample.json \
   --enable-apis
 ```
 
-API enrichment is opt-in. `--enable-apis` uses `OSRM_BASE_URL` for truck routing and `OPENWEATHER_API_KEY` for weather risk when configured. Maritime distances use the free local `searoute` Python package from backend requirements, with haversine fallback when unavailable.
+API enrichment is opt-in. `--enable-apis` uses `OSRM_BASE_URL` for truck routing and `OPENWEATHER_API_KEY` for weather risk when configured. Maritime distances use the free local `searoute` Python package from backend requirements, with haversine fallback when unavailable. Air and rail lanes are generated automatically from ingested airport and rail-terminal coordinates and then used directly by the route optimizer.

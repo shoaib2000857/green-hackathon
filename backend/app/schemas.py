@@ -42,6 +42,7 @@ class Edge(BaseModel):
     emission_factor_kg_per_tonne_km: float = Field(gt=0)
     reliability: float = Field(ge=0, le=1)
     risk: float = Field(ge=0, le=1)
+    geometry: list[list[float]] = Field(default_factory=list)
 
 
 class OptimizationWeights(BaseModel):
@@ -74,8 +75,12 @@ class OptimizeRouteRequest(BaseModel):
 class RouteLeg(BaseModel):
     from_node: str
     from_name: str
+    from_latitude: float
+    from_longitude: float
     to_node: str
     to_name: str
+    to_latitude: float
+    to_longitude: float
     mode: TransportMode
     distance_km: float
     travel_time_hr: float
@@ -83,6 +88,7 @@ class RouteLeg(BaseModel):
     emissions_kg: float
     risk: float
     reliability: float
+    geometry: list[list[float]] = Field(default_factory=list)
 
 
 class RouteOption(BaseModel):
@@ -162,4 +168,3 @@ class AnalyticsScope3(BaseModel):
     emissions_by_mode: dict[str, float]
     emissions_by_lane: dict[str, float]
     average_emissions_per_shipment_kg: float
-

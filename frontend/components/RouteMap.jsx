@@ -8,38 +8,6 @@ const TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
 const TILE_ATTRIBUTION = "&copy; OpenStreetMap &copy; CARTO";
 const LEG_DURATION_MS = 1200;
 
-const waypointCoordinates = {
-  "chennai port": { name: "Chennai Port", lat: 13.095, lng: 80.309 },
-  "chennai air cargo": { name: "Chennai Air Cargo", lat: 12.994, lng: 80.17 },
-  "bengaluru air cargo": { name: "Bengaluru Air Cargo", lat: 13.198, lng: 77.706 },
-  "delhi rail logistics hub": { name: "Delhi Rail Logistics Hub", lat: 28.644, lng: 77.216 },
-  "nhava sheva port": { name: "Nhava Sheva Port", lat: 18.949, lng: 72.952 },
-  "colombo port": { name: "Colombo Port", lat: 6.948, lng: 79.844 },
-  "port of singapore": { name: "Port of Singapore", lat: 1.265, lng: 103.82 },
-  "changi air cargo": { name: "Changi Air Cargo", lat: 1.364, lng: 103.991 },
-  "kuala lumpur inland terminal": { name: "Kuala Lumpur Inland Terminal", lat: 3.139, lng: 101.687 },
-  "bangkok logistics hub": { name: "Bangkok Logistics Hub", lat: 13.756, lng: 100.501 },
-  "ho chi minh port": { name: "Ho Chi Minh Port", lat: 10.776, lng: 106.7 },
-  "hanoi rail terminal": { name: "Hanoi Rail Terminal", lat: 21.028, lng: 105.834 },
-  "port of yokohama": { name: "Port of Yokohama", lat: 35.443, lng: 139.638 },
-  "tokyo air cargo": { name: "Tokyo Air Cargo", lat: 35.772, lng: 140.392 },
-  "tokyo distribution center": { name: "Tokyo Distribution Center", lat: 35.676, lng: 139.65 },
-  "shanghai port": { name: "Shanghai Port", lat: 31.23, lng: 121.473 },
-  "hong kong air cargo": { name: "Hong Kong Air Cargo", lat: 22.308, lng: 113.918 },
-  chennai: { name: "Chennai Port", lat: 13.095, lng: 80.309 },
-  singapore: { name: "Port of Singapore", lat: 1.265, lng: 103.82 },
-  yokohama: { name: "Port of Yokohama", lat: 35.443, lng: 139.638 },
-  tokyo: { name: "Tokyo Air Cargo", lat: 35.772, lng: 140.392 },
-  narita: { name: "Tokyo Air Cargo", lat: 35.772, lng: 140.392 },
-  shanghai: { name: "Shanghai Port", lat: 31.23, lng: 121.473 },
-  mumbai: { name: "Nhava Sheva Port", lat: 18.949, lng: 72.952 },
-  colombo: { name: "Colombo Port", lat: 6.948, lng: 79.844 },
-  bangkok: { name: "Bangkok Logistics Hub", lat: 13.756, lng: 100.501 },
-  "hong kong": { name: "Hong Kong Air Cargo", lat: 22.308, lng: 113.918 },
-  busan: { name: "Port of Yokohama", lat: 35.443, lng: 139.638 },
-  jakarta: { name: "Bangkok Logistics Hub", lat: 13.756, lng: 100.501 }
-};
-
 const modeVisuals = {
   sea: { label: "Sea", color: "#5DCAA5", weight: 2.5, dashArray: "8,6" },
   rail: { label: "Rail", color: "#8AAB4A", weight: 2.5, dashArray: "2,8" },
@@ -89,45 +57,22 @@ function loadLeaflet() {
   return leafletPromise;
 }
 
-function normalizeName(value) {
-  return value.toLowerCase().replace(/[^a-z\s]/g, " ");
-}
-
-function matchWaypoint(value) {
-  const normalized = normalizeName(value);
-  const exact = waypointCoordinates[normalized];
-  if (exact) {
-    return exact;
-  }
-
-  const match = Object.entries(waypointCoordinates).find(([city]) => normalized.includes(city));
-  return match ? match[1] : null;
-}
-
-function waypointForLegName(name) {
-  const waypoint = matchWaypoint(name);
-  if (!waypoint) {
-    console.warn(`Route map skipped unmatched waypoint: ${name}`);
-    return null;
-  }
-
-  return { ...waypoint, sourceName: name };
-}
-
 function buildRouteSegments(legs) {
   const segments = [];
   const waypoints = [];
   let cumulativeEmissions = 0;
 
   legs.forEach((leg, index) => {
-    const from = waypointForLegName(leg.from_name);
-    const to = waypointForLegName(leg.to_name);
-
-    if (!from || !to) {
-      console.warn(`Route map skipped unmatched leg: ${leg.from_name} to ${leg.to_name}`);
-      cumulativeEmissions += leg.emissions_kg;
-      return;
-    }
+    const from = {
+      name: leg.from_name,
+      lat: leg.from_latitude,
+      lng: leg.from_longitude
+    };
+    const to = {
+      name: leg.to_name,
+      lat: leg.to_latitude,
+      lng: leg.to_longitude
+    };
 
     if (index === 0 || waypoints.length === 0) {
       waypoints.push({ ...from, cumulativeEmissions });
@@ -135,7 +80,16 @@ function buildRouteSegments(legs) {
 
     cumulativeEmissions += leg.emissions_kg;
     waypoints.push({ ...to, cumulativeEmissions });
-    segments.push({ from, to, mode: leg.mode, emissions: leg.emissions_kg });
+    segments.push({
+      from,
+      to,
+      mode: leg.mode,
+      emissions: leg.emissions_kg,
+      geometry:
+        Array.isArray(leg.geometry) && leg.geometry.length >= 2
+          ? leg.geometry.map((point) => [point[0], point[1]])
+          : defaultGeometryForMode(leg.mode, from, to)
+    });
   });
 
   return { segments, waypoints };
@@ -171,6 +125,28 @@ function greatCirclePoints(from, to, steps = 42) {
 
     return [toDegrees(lat), toDegrees(lon)];
   });
+}
+
+function corridorPoints(from, to, bend = 0.12) {
+  const midLat = (from.lat + to.lat) / 2;
+  const midLng = (from.lng + to.lng) / 2;
+  const deltaLat = to.lat - from.lat;
+  const deltaLng = to.lng - from.lng;
+  return [
+    [from.lat, from.lng],
+    [midLat + -deltaLng * bend, midLng + deltaLat * bend],
+    [to.lat, to.lng]
+  ];
+}
+
+function defaultGeometryForMode(mode, from, to) {
+  if (mode === "sea" || mode === "air") {
+    return greatCirclePoints(from, to);
+  }
+  if (mode === "rail") {
+    return corridorPoints(from, to, 0.16);
+  }
+  return corridorPoints(from, to, 0.08);
 }
 
 function toRadians(value) {
@@ -299,13 +275,7 @@ export default function RouteMap({ legs, totalCO2e }) {
 
             const visual = modeVisuals[segment.mode] ?? defaultModeVisual;
 
-            const points =
-              segment.mode === "sea"
-                ? greatCirclePoints(segment.from, segment.to)
-                : [
-                    [segment.from.lat, segment.from.lng],
-                    [segment.to.lat, segment.to.lng]
-                  ];
+            const points = segment.geometry;
             const polyline = L.polyline([], {
               color: visual.color,
               weight: visual.weight,
