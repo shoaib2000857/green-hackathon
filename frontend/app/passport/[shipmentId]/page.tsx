@@ -41,8 +41,8 @@ export default function PassportPage() {
     return (
       <main className="grid min-h-screen place-items-center p-6">
         <div className="rounded-[2rem] bg-white/80 p-8 shadow-panel">
-          <p className="text-sm font-bold uppercase tracking-[0.22em] text-red-700">Passport error</p>
-          <h1 className="display mt-2 text-4xl font-black">Unable to load shipment</h1>
+          <p className="section-label text-red-700">Passport error</p>
+          <h1 className="dashboard-title mt-2 text-ink md:text-[3rem]">Unable to load shipment</h1>
           <p className="mt-4 text-ink/70">{error}</p>
         </div>
       </main>
@@ -63,9 +63,9 @@ export default function PassportPage() {
       <section className="relative mx-auto max-w-5xl rounded-[2.4rem] bg-white/72 p-6 shadow-panel backdrop-blur md:p-9">
         <div className="grid gap-6 md:grid-cols-[1fr_auto]">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.22em] text-moss">Digital carbon passport</p>
-            <h1 className="display mt-2 text-5xl font-black md:text-7xl">{passport.shipment.shipment_id}</h1>
-            <p className="mt-4 text-lg text-ink/70">
+            <p className="section-label text-moss">Digital carbon passport</p>
+            <h1 className="dashboard-title mt-2 text-ink md:text-[4.25rem]">{passport.shipment.shipment_id}</h1>
+            <p className="body-copy mt-4 text-lg text-ink/70 numeric">
               {passport.shipment.origin.name} to {passport.shipment.destination.name}, {passport.shipment.weight_kg.toLocaleString()} kg freight.
             </p>
           </div>
@@ -107,19 +107,19 @@ export default function PassportPage() {
         <section className="mt-8 rounded-[2rem] bg-ink p-5 text-white">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.22em] text-white/50">Shipment history</p>
-              <h2 className="display mt-1 text-4xl font-black">Verified route legs</h2>
+              <p className="section-label text-white/50">Shipment history</p>
+              <h2 className="display mt-1 text-3xl font-semibold md:text-4xl">Verified route legs</h2>
             </div>
-            <span className="rounded-full bg-white/10 px-4 py-2 text-sm">{passport.modes_used.join(" + ")}</span>
+            <span className="rounded-full bg-white/10 px-4 py-2 text-sm numeric">{passport.modes_used.join(" + ")}</span>
           </div>
           <div className="mt-5 grid gap-3">
             {passport.legs.map((leg, index) => (
               <div key={`${leg.from_node}-${leg.to_node}-${index}`} className="rounded-2xl bg-white/10 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="font-bold">{leg.from_name} to {leg.to_name}</p>
-                  <span className="rounded-full bg-white px-3 py-1 text-xs font-bold uppercase text-ink">{leg.mode}</span>
+                  <p className="font-semibold">{leg.from_name} to {leg.to_name}</p>
+                  <span className="section-label rounded-full bg-white px-3 py-1 text-ink">{leg.mode}</span>
                 </div>
-                <p className="mt-2 text-sm text-white/60">
+                <p className="metric-md numeric mt-2 text-white/60">
                   {leg.distance_km.toLocaleString()} km, {leg.travel_time_hr.toFixed(1)} hr, {leg.emissions_kg.toFixed(1)} kg CO2e
                 </p>
               </div>
@@ -128,13 +128,13 @@ export default function PassportPage() {
         </section>
 
         <section className="mt-8">
-          <p className="text-sm font-bold uppercase tracking-[0.22em] text-moss">Tamper-evident audit trail</p>
+          <p className="section-label text-moss">Tamper-evident audit trail</p>
           <div className="mt-4 grid gap-3">
             {passport.ledger.map((entry) => (
               <div key={entry.entry_hash} className="rounded-2xl border border-ink/10 bg-white/70 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="font-bold">Leg {entry.leg_index}</p>
-                  <p className="text-sm text-ink/50">{new Date(entry.created_at).toLocaleString()}</p>
+                  <p className="font-semibold numeric">Leg {entry.leg_index}</p>
+                  <p className="text-sm text-ink/50 numeric">{new Date(entry.created_at).toLocaleString()}</p>
                 </div>
                 <p className="mt-2 break-all font-mono text-xs text-ink/60">{entry.entry_hash}</p>
               </div>
@@ -142,8 +142,8 @@ export default function PassportPage() {
             {offsetLedgerEntry ? (
               <div key={offsetLedgerEntry.entry_hash} className="rounded-2xl border border-ink/10 bg-white/70 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="font-bold">{offsetLedgerEntry.label}</p>
-                  <p className="text-sm text-ink/50">{new Date(offsetLedgerEntry.created_at).toLocaleString()}</p>
+                  <p className="font-semibold">{offsetLedgerEntry.label}</p>
+                  <p className="text-sm text-ink/50 numeric">{new Date(offsetLedgerEntry.created_at).toLocaleString()}</p>
                 </div>
                 <p className="mt-2 break-all font-mono text-xs text-ink/60">{offsetLedgerEntry.entry_hash}</p>
               </div>
@@ -158,8 +158,8 @@ export default function PassportPage() {
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl bg-limewash p-4">
-      <p className="text-xs font-bold uppercase tracking-[0.18em] text-moss/70">{label}</p>
-      <p className="mt-2 text-2xl font-black">{value}</p>
+      <p className="section-label text-moss/70">{label}</p>
+      <p className="metric-xl numeric mt-2 text-ink">{value}</p>
     </div>
   );
 }

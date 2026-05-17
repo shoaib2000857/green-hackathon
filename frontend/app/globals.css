@@ -10,8 +10,8 @@
   --clay: #c46f3d;
   --harbor: #193f4c;
   --mist: #f4f0e6;
-  --display: "Aptos Display", "Space Grotesk", "Trebuchet MS", sans-serif;
-  --text: "Aptos", "Gill Sans", "Segoe UI", sans-serif;
+  --display: "Aptos", "Segoe UI", sans-serif;
+  --text: "Aptos", "Segoe UI", sans-serif;
 }
 
 * {
@@ -26,6 +26,9 @@ body {
     linear-gradient(135deg, #f7f2e4 0%, #eaf3d8 48%, #d7ebd9 100%);
   color: var(--ink);
   font-family: var(--text);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  text-rendering: optimizeLegibility;
 }
 
 button,
@@ -48,7 +51,59 @@ select {
 
 .display {
   font-family: var(--display);
-  letter-spacing: -0.055em;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.dashboard-title {
+  font-family: var(--display);
+  font-size: clamp(2.5rem, 4vw, 4.5rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 0.98;
+}
+
+.section-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.body-copy {
+  line-height: 1.7;
+}
+
+.body-muted {
+  line-height: 1.65;
+  font-weight: 400;
+}
+
+.metric-xl {
+  font-size: clamp(1.75rem, 2.4vw, 2.25rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.metric-lg {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.08;
+}
+
+.metric-md {
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.numeric {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
 }
 
 .route-line {

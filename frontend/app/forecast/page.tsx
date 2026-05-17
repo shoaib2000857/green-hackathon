@@ -420,8 +420,8 @@ function ForecastPageContent() {
       <section className="relative mx-auto max-w-7xl">
         <header className="flex flex-col gap-5 rounded-[1.75rem] border border-white/60 bg-white/65 p-6 shadow-panel backdrop-blur md:flex-row md:items-center md:justify-between">
           <div className="max-w-3xl">
-            <h1 className="text-4xl font-bold text-ink md:text-5xl">Emissions Forecasting</h1>
-            <p className="mt-2 text-base text-ink/70">Physics-based carbon estimation using GLEC emission factors — with uncertainty ranges and optional live data enrichment</p>
+            <h1 className="dashboard-title text-ink md:text-[4rem]">Emissions Forecasting</h1>
+            <p className="body-copy mt-2 text-base text-ink/70">Physics-based carbon estimation using GLEC emission factors — with uncertainty ranges and optional live data enrichment</p>
             {showInfoBanner ? (
               <div className="mt-4 flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 shadow-sm">
                 <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-semibold text-sky-700">i</span>
@@ -449,7 +449,7 @@ function ForecastPageContent() {
         {error ? (
           <div className="mt-5 flex items-start justify-between gap-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             <span>{error}</span>
-            <button className="font-black" onClick={() => setError(null)} aria-label="Dismiss error">
+            <button className="font-semibold" onClick={() => setError(null)} aria-label="Dismiss error">
               ×
             </button>
           </div>
@@ -459,8 +459,8 @@ function ForecastPageContent() {
           <form onSubmit={runForecast} className="rounded-[1.5rem] bg-ink p-5 text-white shadow-panel">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-medium text-white/50 uppercase tracking-[0.1em]">Forecast builder</p>
-                <h2 className="mt-1 text-xl font-semibold">Shipment legs</h2>
+                <p className="section-label text-white/50">Forecast builder</p>
+                <h2 className="display mt-1 text-xl font-semibold">Shipment legs</h2>
               </div>
               <button type="button" onClick={addLeg} className="rounded-full bg-fern px-4 py-2 text-sm font-semibold text-ink transition hover:-translate-y-0.5">
                 Add Leg
@@ -471,7 +471,7 @@ function ForecastPageContent() {
               {legs.map((leg, index) => (
                 <div key={leg.id} className="rounded-xl border border-white/10 bg-white/10 p-4">
                   <div className="mb-4 flex items-center justify-between gap-3">
-                    <span className="font-semibold text-white">Leg {index + 1}</span>
+                    <span className="font-semibold text-white numeric">Leg {index + 1}</span>
                     <button type="button" onClick={() => removeLeg(leg.id)} className="grid h-8 w-8 place-items-center rounded-full bg-white/10 text-lg font-medium text-white/70 transition hover:bg-white/20">
                       ×
                     </button>
@@ -494,7 +494,7 @@ function ForecastPageContent() {
                     <label className="grid gap-2 text-sm text-white/70 md:col-span-2">
                       <span className="flex justify-between">
                         Load %
-                        <strong className="text-white">{leg.load_pct}%</strong>
+                        <strong className="text-white numeric">{leg.load_pct}%</strong>
                       </span>
                       <input type="range" min="0" max="100" value={leg.load_pct} onChange={(event) => updateLeg(leg.id, { load_pct: Number(event.target.value) })} />
                     </label>
@@ -512,7 +512,7 @@ function ForecastPageContent() {
                       Departure date
                       <input className="rounded-xl border border-white/10 bg-white/10 px-3 py-3 text-white outline-none focus:border-fern" type="date" value={leg.departure_date} onChange={(event) => updateLeg(leg.id, { departure_date: event.target.value })} />
                     </label>
-                    <label className="flex items-center gap-3 text-sm font-bold text-white md:col-span-2">
+                    <label className="flex items-center gap-3 text-sm font-semibold text-white md:col-span-2">
                       <input type="checkbox" checked={leg.is_reefer} onChange={(event) => updateLeg(leg.id, { is_reefer: event.target.checked })} />
                       Refrigerated container
                     </label>
@@ -657,7 +657,7 @@ function ForecastPageContent() {
                     <circle cx="48" cy="108" r="9" fill="#c46f3d" />
                     <circle cx="112" cy="76" r="9" fill="#7aaa65" />
                   </svg>
-                  <p className="mt-5 text-xl font-black text-ink">Add legs above and run your forecast</p>
+                  <p className="mt-5 text-xl font-semibold text-ink">Add legs above and run your forecast</p>
                 </div>
               </div>
             )}
@@ -690,7 +690,7 @@ function SummaryPill({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl bg-white/10 p-3">
       <p className="text-xs text-white/50">{label}</p>
-      <p className="mt-1 font-semibold text-white">{value}</p>
+      <p className="metric-md numeric mt-1 text-white">{value}</p>
     </div>
   );
 }
@@ -698,8 +698,8 @@ function SummaryPill({ label, value }: { label: string; value: string }) {
 function MetricCard({ label, value, className }: { label: string; value: string; className: string }) {
   return (
     <div className="rounded-xl bg-white p-4 shadow-sm">
-      <p className="text-xs font-medium uppercase tracking-[0.08em] text-ink/40">{label}</p>
-      <p className={`mt-2 text-2xl font-semibold ${className}`}>{value}</p>
+      <p className="section-label text-ink/40">{label}</p>
+      <p className={`metric-xl numeric mt-2 ${className}`}>{value}</p>
     </div>
   );
 }
@@ -718,19 +718,19 @@ function LegCard({ leg, showLegend = false }: { leg: LegForecast; showLegend?: b
             <span className="mr-2">{meta.emoji}</span>
             {leg.from_node} → {leg.to_node}
           </h3>
-          <p className={`mt-1 text-sm ${getDistanceSourceTone(leg.distance_source)}`}>
+          <p className={`metric-md numeric mt-1 ${getDistanceSourceTone(leg.distance_source)}`}>
             {leg.distance_km.toFixed(2)} km <span className="capitalize">(via {getDistanceSourceLabel(leg.distance_source)})</span>
           </p>
         </div>
       </div>
 
       <div className="mt-4">
-        {showLegend ? <p className="mb-2 text-[11px] font-medium tracking-[0.08em] text-ink/40">◀ Best case ——— Expected ——— Worst case ▶</p> : null}
+        {showLegend ? <p className="section-label mb-2 text-ink/40">◀ Best case ——— Expected ——— Worst case ▶</p> : null}
         <div className="relative h-4 rounded-full bg-harbor/10">
           <div className="absolute inset-y-0 left-0 right-0 rounded-full bg-gradient-to-r from-harbor via-fern to-clay" />
           <span className="absolute -top-px -bottom-px z-[1] w-[4px] -translate-y-0 rounded-full border border-ink bg-white shadow-[0_0_0_1px_rgba(255,255,255,0.5)]" style={{ left: `calc(${nominalPercent}% - 2px)` }} />
         </div>
-        <div className="mt-2 flex justify-between text-xs font-medium text-ink/50">
+        <div className="metric-md numeric mt-2 flex justify-between text-ink/50">
           <span>{formatKg(leg.emissions_low_kg)}</span>
           <span>{formatKg(leg.emissions_nominal_kg)}</span>
           <span>{formatKg(leg.emissions_high_kg)}</span>
@@ -740,19 +740,19 @@ function LegCard({ leg, showLegend = false }: { leg: LegForecast; showLegend?: b
       <div className="mt-4 flex flex-wrap gap-2">
         {leg.corrections_applied.length > 0 ? (
           leg.corrections_applied.map((correction) => (
-            <span key={correction} className="rounded-full bg-limewash px-3 py-1 text-xs font-medium text-moss">
+            <span key={correction} className="section-label rounded-full bg-limewash px-3 py-1 text-moss">
               {correction}
             </span>
           ))
         ) : (
-          <span className="rounded-full bg-ink/5 px-3 py-1 text-xs font-medium text-ink/40">no corrections</span>
+          <span className="section-label rounded-full bg-ink/5 px-3 py-1 text-ink/40">no corrections</span>
         )}
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-ink/50">
+      <div className="numeric mt-4 flex flex-wrap items-center gap-2 text-xs text-ink/50">
         <span>via {leg.emission_factor_source === "climatiq" ? "Climatiq" : "GLEC local"}</span>
         {leg.weather_context ? (
-          <span className="rounded-full bg-harbor/10 px-3 py-1 font-medium text-harbor/70">
+          <span className="section-label rounded-full bg-harbor/10 px-3 py-1 text-harbor/70">
             {Number(leg.weather_context.wind_speed_ms ?? 0).toFixed(2)} m/s · {Number(leg.weather_context.temp_c ?? 0).toFixed(2)}°C
           </span>
         ) : null}
