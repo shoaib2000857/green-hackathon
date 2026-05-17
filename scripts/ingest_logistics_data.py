@@ -288,8 +288,9 @@ def enrich_edge(
     cost = max(distance * COST_PER_TONNE_KM[edge.mode], 25.0)
     risk = estimate_risk(edge, source, target, enable_apis, api_sources)
     reliability = max(0.55, min(0.99, 1 - risk))
-    return edge.model_copy(
-        update={
+    return Edge.model_validate(
+        {
+            **edge.model_dump(mode="json"),
             "distance_km": round(distance, 3),
             "travel_time_hr": round(travel_time, 3),
             "base_cost_usd": round(cost, 2),

@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class TransportMode(StrEnum):
@@ -43,6 +43,52 @@ class Edge(BaseModel):
     reliability: float = Field(ge=0, le=1)
     risk: float = Field(ge=0, le=1)
     geometry: list[list[float]] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_values(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+
+        mode_value = data.get("mode")
+        try:
+            mode = mode_value if isinstance(mode_value, TransportMode) else TransportMode(str(mode_value))
+        except Exception:
+            mode = None
+
+        min_distance_by_mode = {
+            TransportMode.truck: 5.0,
+            TransportMode.rail: 10.0,
+            TransportMode.sea: 25.0,
+            TransportMode.air: 50.0,
+        }
+        min_distance = min_distance_by_mode.get(mode, 0.001)
+
+        data["distance_km"] = _normalize_positive_number(data.get("distance_km"), minimum=min_distance)
+        data["travel_time_hr"] = _normalize_positive_number(data.get("travel_time_hr"), minimum=0.001)
+        data["base_cost_usd"] = _normalize_positive_number(data.get("base_cost_usd"), minimum=0.01)
+        data["emission_factor_kg_per_tonne_km"] = _normalize_positive_number(
+            data.get("emission_factor_kg_per_tonne_km"),
+            minimum=0.0001,
+        )
+        data["reliability"] = _clamp_unit_interval(data.get("reliability"), fallback=0.82)
+        data["risk"] = _clamp_unit_interval(data.get("risk"), fallback=0.15)
+        return data
+
+    @field_validator("geometry", mode="before")
+    @classmethod
+    def normalize_geometry(cls, value: Any) -> list[list[float]]:
+        if not isinstance(value, list):
+            return []
+        points: list[list[float]] = []
+        for point in value:
+            if not isinstance(point, (list, tuple)) or len(point) < 2:
+                continue
+            try:
+                points.append([round(float(point[0]), 6), round(float(point[1]), 6)])
+            except (TypeError, ValueError):
+                continue
+        return points
 
 
 class OptimizationWeights(BaseModel):
@@ -170,3 +216,19 @@ class AnalyticsScope3(BaseModel):
     emissions_by_mode: dict[str, float]
     emissions_by_lane: dict[str, float]
     average_emissions_per_shipment_kg: float
+
+
+def _normalize_positive_number(value: Any, *, minimum: float) -> float:
+    try:
+        numeric = abs(float(value))
+    except (TypeError, ValueError):
+        return minimum
+    return numeric if numeric > 0 else minimum
+
+
+def _clamp_unit_interval(value: Any, *, fallback: float) -> float:
+    try:
+        numeric = abs(float(value))
+    except (TypeError, ValueError):
+        return fallback
+    return max(0.0, min(1.0, numeric))

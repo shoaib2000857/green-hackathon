@@ -41,10 +41,12 @@ def load_runtime_graph() -> tuple[list[Node], list[Edge], dict[str, Any]]:
 
 def save_graph_artifact(path: Path, nodes: list[Node], edges: list[Edge], metadata: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    normalized_nodes = [Node.model_validate(node.model_dump(mode="json")) for node in nodes]
+    normalized_edges = [Edge.model_validate(edge.model_dump(mode="json")) for edge in edges]
     payload = {
         "metadata": metadata,
-        "nodes": [node.model_dump(mode="json") for node in nodes],
-        "edges": [edge.model_dump(mode="json") for edge in edges],
+        "nodes": [node.model_dump(mode="json") for node in normalized_nodes],
+        "edges": [edge.model_dump(mode="json") for edge in normalized_edges],
     }
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
@@ -65,4 +67,3 @@ def _fallback_metadata(reason: str, error: str | None = None) -> dict[str, Any]:
     if error:
         metadata["error"] = error
     return metadata
-
