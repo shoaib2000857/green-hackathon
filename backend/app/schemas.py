@@ -103,6 +103,8 @@ class RouteOption(BaseModel):
     carbon_saving_percent: float
     legs: list[RouteLeg]
     explanation: str
+    explanation_source: str = "deterministic"
+    explanation_details: list[str] = Field(default_factory=list)
     tradeoffs: list[str]
 
 

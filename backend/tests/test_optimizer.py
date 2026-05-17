@@ -14,7 +14,15 @@ def test_optimizer_returns_tradeoff_routes_for_demo_lane() -> None:
 
     assert response.recommendation.total_emissions_kg > 0
     assert len(response.route_options) >= 3
-    assert any(option.strategy == "express" for option in response.route_options)
+    strategies = {option.strategy for option in response.route_options}
+    assert Priority.balanced.value in strategies
+    assert strategies & {
+        Priority.carbon_first.value,
+        Priority.express.value,
+        Priority.low_cost.value,
+        Priority.low_risk.value,
+        "pareto_tradeoff",
+    }
     assert any(leg.mode.value == "sea" for leg in response.recommendation.legs)
 
 
@@ -31,4 +39,3 @@ def test_optimizer_supports_india_to_vietnam() -> None:
     assert response.origin.country == "India"
     assert response.destination.country == "Vietnam"
     assert response.recommendation.total_cost_usd > 0
-

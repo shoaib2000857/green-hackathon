@@ -207,7 +207,24 @@ export default function DashboardPage() {
             <div className="rounded-[2rem] bg-white/70 p-6 shadow-panel backdrop-blur">
               <p className="text-sm font-bold uppercase tracking-[0.22em] text-moss">Recommended route</p>
               <h2 className="display mt-2 text-4xl font-black capitalize text-ink">{route.strategy.replaceAll("_", " ")}</h2>
-              <p className="mt-4 text-ink/70">{route.explanation}</p>
+              <div className="mt-4 rounded-[1.5rem] border border-moss/10 bg-limewash/65 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-moss/70">AI Explanation</p>
+                  <span className="rounded-full bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-moss">
+                    {route.explanation_source}
+                  </span>
+                </div>
+                <p className="mt-3 text-ink/75">{route.explanation}</p>
+                {route.explanation_details.length > 0 ? (
+                  <div className="mt-4 grid gap-2">
+                    {route.explanation_details.map((detail) => (
+                      <p key={detail} className="text-sm text-ink/60">
+                        {detail}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
 
               <div className="mt-6 grid grid-cols-2 gap-3">
                 <Metric label="CO2e" value={`${route.total_emissions_kg.toFixed(1)} kg`} />
@@ -300,6 +317,9 @@ export default function DashboardPage() {
                     <span>{option.total_time_hr.toFixed(1)} hr</span>
                     <span>Risk {(option.average_risk * 100).toFixed(0)}%</span>
                   </div>
+                  <p className="mt-3 text-xs font-semibold uppercase tracking-[0.14em] text-moss/70">
+                    Explanation source: {option.explanation_source}
+                  </p>
                   <p className="mt-4 text-sm text-ink/60">{option.tradeoffs.join(". ")}.</p>
                 </button>
               ))}

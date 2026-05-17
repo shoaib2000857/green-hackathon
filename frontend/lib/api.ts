@@ -33,6 +33,8 @@ export type RouteOption = {
   carbon_saving_percent: number;
   legs: RouteLeg[];
   explanation: string;
+  explanation_source: string;
+  explanation_details: string[];
   tradeoffs: string[];
 };
 

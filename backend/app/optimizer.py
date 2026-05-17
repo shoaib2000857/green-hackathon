@@ -181,6 +181,8 @@ def _route_option(
         carbon_saving_percent=round(carbon_saving, 2),
         legs=list(candidate.legs),
         explanation="",
+        explanation_source="deterministic",
+        explanation_details=[],
         tradeoffs=[],
     )
     route.tradeoffs = build_tradeoffs(
@@ -189,7 +191,10 @@ def _route_option(
         greenest=_option_from_candidate(greenest),
         cheapest=_option_from_candidate(cheapest),
     )
-    route.explanation = build_explanation(route, baseline=_option_from_candidate(baseline))
+    explanation = build_explanation(route, baseline=_option_from_candidate(baseline))
+    route.explanation = explanation.summary
+    route.explanation_source = explanation.source
+    route.explanation_details = explanation.details
     return route
 
 
@@ -206,6 +211,8 @@ def _option_from_candidate(candidate: Candidate) -> RouteOption:
         carbon_saving_percent=0,
         legs=list(candidate.legs),
         explanation="",
+        explanation_source="deterministic",
+        explanation_details=[],
         tradeoffs=[],
     )
 

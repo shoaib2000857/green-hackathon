@@ -89,8 +89,16 @@ select {
   border-top: 2px dashed #5dcaa5;
 }
 
+.route-map-legend-rail {
+  border-top: 2px dashed #8aab4a;
+}
+
 .route-map-legend-truck {
   border-top: 2px solid #ef9f27;
+}
+
+.route-map-legend-air {
+  border-top: 2px dashed #9ccbff;
 }
 
 .route-map-final-marker {
@@ -192,4 +200,3 @@ select {
     transform: scale(1);
   }
 }
-

@@ -59,7 +59,18 @@ def main() -> None:
     parser.add_argument("--max-external-nodes", type=int, default=250)
     parser.add_argument("--generate-network", action="store_true", default=os.getenv("INGEST_GENERATE_NETWORK", "true").lower() == "true")
     parser.add_argument("--max-neighbors-per-mode", type=int, default=int(os.getenv("INGEST_MAX_NEIGHBORS_PER_MODE", "4")))
+    parser.add_argument("--quiet", action="store_true")
     args = parser.parse_args()
+
+    def log(message: str) -> None:
+        if not args.quiet:
+            print(f"[ingest] {message}", flush=True)
+
+    log("starting graph build")
+    ensure_input_exists(args.unlocode, "--unlocode")
+    ensure_input_exists(args.world_port_index, "--world-port-index")
+    ensure_input_exists(args.ourairports, "--ourairports")
+    ensure_input_exists(args.emission_factors, "--emission-factors")
 
     nodes = {node.node_id: node for node in NODES}
     curated_node_ids = set(nodes)
@@ -67,19 +78,25 @@ def main() -> None:
     dataset_counts: dict[str, int] = {}
 
     if args.unlocode:
+        log(f"loading UN/LOCODE from {args.unlocode}")
         count = merge_unlocode(Path(args.unlocode), nodes, args.include_external_nodes, args.max_external_nodes)
         dataset_counts["unlocode_rows_used"] = count
         source_notes.append(f"UN/LOCODE local file: {args.unlocode}")
+        log(f"UN/LOCODE rows merged: {count}")
 
     if args.world_port_index:
+        log(f"loading World Port Index from {args.world_port_index}")
         count = merge_world_port_index(Path(args.world_port_index), nodes, args.include_external_nodes, args.max_external_nodes)
         dataset_counts["world_port_index_rows_used"] = count
         source_notes.append(f"World Port Index local file: {args.world_port_index}")
+        log(f"World Port Index rows merged: {count}")
 
     if args.ourairports:
+        log(f"loading OurAirports from {args.ourairports}")
         count = merge_ourairports(Path(args.ourairports), nodes, args.include_external_nodes, args.max_external_nodes)
         dataset_counts["ourairports_rows_used"] = count
         source_notes.append(f"OurAirports local file: {args.ourairports}")
+        log(f"OurAirports rows merged: {count}")
 
     factors = load_emission_factors(Path(args.emission_factors)) if args.emission_factors else FALLBACK_FACTORS
     source_notes.append(
@@ -89,13 +106,16 @@ def main() -> None:
     )
 
     api_sources: list[str] = []
-    edges = [
-        enrich_edge(edge, nodes, factors, args.enable_apis, api_sources)
-        for edge in EDGES
-        if edge.source_node in nodes and edge.target_node in nodes
-    ]
+    log(f"enriching {len(EDGES)} curated edges")
+    edges: list[Edge] = []
+    curated_edges = [edge for edge in EDGES if edge.source_node in nodes and edge.target_node in nodes]
+    for index, edge in enumerate(curated_edges, start=1):
+        edges.append(enrich_edge(edge, nodes, factors, args.enable_apis, api_sources))
+        if index % 25 == 0 or index == len(curated_edges):
+            log(f"curated edge progress: {index}/{len(curated_edges)}")
 
     if args.generate_network and len(nodes) > len(curated_node_ids):
+        log("generating multimodal edges from ingested nodes")
         generated_edges = build_generated_edges(
             nodes,
             factors,
@@ -103,10 +123,12 @@ def main() -> None:
             api_sources,
             max_neighbors_per_mode=max(args.max_neighbors_per_mode, 1),
             existing_edges=edges,
+            logger=log,
         )
         edges.extend(generated_edges)
         dataset_counts["generated_edges"] = len(generated_edges)
         source_notes.append("Auto-generated multimodal edges from ingested node coordinates")
+        log(f"generated edges: {len(generated_edges)}")
 
     metadata = {
         "graph_source": "ingested",
@@ -123,7 +145,13 @@ def main() -> None:
         ],
     }
     save_graph_artifact(Path(args.output), list(nodes.values()), edges, metadata)
+    log(f"saved graph artifact to {args.output} with {len(nodes)} nodes and {len(edges)} edges")
     print(json.dumps({"output": args.output, **metadata}, indent=2))
+
+
+def ensure_input_exists(path_value: str | None, flag: str) -> None:
+    if path_value and not Path(path_value).exists():
+        raise FileNotFoundError(f"{flag} points to a missing file: {path_value}")
 
 
 def merge_unlocode(path: Path, nodes: dict[str, Node], include_external: bool, max_external: int) -> int:
@@ -165,8 +193,8 @@ def merge_world_port_index(path: Path, nodes: dict[str, Node], include_external:
         return 0
     count = 0
     for row in read_rows(path):
-        name = value_for(row, "Main Port Name", "PORT_NAME", "port_name", "name")
-        country = value_for(row, "Country Code", "COUNTRY", "country")
+        name = value_for(row, "Main Port Name", "PORT_NAME", "port_name", "main_port_name", "name")
+        country = value_for(row, "Country Code", "COUNTRY", "country", "regionname")
         lat = parse_float(value_for(row, "Latitude", "LATITUDE", "lat"))
         lon = parse_float(value_for(row, "Longitude", "LONGITUDE", "lon", "lng"))
         if not name or lat is None or lon is None:
@@ -331,6 +359,7 @@ def build_generated_edges(
     *,
     max_neighbors_per_mode: int,
     existing_edges: list[Edge],
+    logger=None,
 ) -> list[Edge]:
     existing_keys = {
         canonical_edge_key(edge.source_node, edge.target_node, edge.mode)
@@ -358,6 +387,8 @@ def build_generated_edges(
             max_neighbors_per_mode=max_neighbors_per_mode,
             predicate=lambda distance_km, target: target.node_id != source.node_id and source.country == target.country and distance_km <= 650,
         )
+    if logger:
+        logger(f"truck edge generation complete: {len(generated)} edges so far")
 
     for source in rail_nodes:
         add_generated_candidates(
@@ -373,6 +404,8 @@ def build_generated_edges(
             max_neighbors_per_mode=max_neighbors_per_mode,
             predicate=lambda distance_km, target: target.node_id != source.node_id and distance_km <= 1800 and (source.country == target.country or distance_km <= 900),
         )
+    if logger:
+        logger(f"rail edge generation complete: {len(generated)} edges so far")
 
     for source in air_nodes:
         add_generated_candidates(
@@ -388,6 +421,8 @@ def build_generated_edges(
             max_neighbors_per_mode=max_neighbors_per_mode,
             predicate=lambda distance_km, target: target.node_id != source.node_id and distance_km >= 180 and distance_km <= 9000 and source.country != target.country,
         )
+    if logger:
+        logger(f"air edge generation complete: {len(generated)} edges so far")
 
     for source in sea_nodes:
         add_generated_candidates(
@@ -403,6 +438,8 @@ def build_generated_edges(
             max_neighbors_per_mode=max_neighbors_per_mode,
             predicate=lambda distance_km, target: target.node_id != source.node_id and distance_km >= 150 and source.country != target.country,
         )
+    if logger:
+        logger(f"sea edge generation complete: {len(generated)} edges so far")
 
     return generated
 
@@ -426,6 +463,8 @@ def add_generated_candidates(
         if target.node_id == source.node_id:
             continue
         distance_km = heuristic_distance_km(source, target, mode)
+        if distance_km <= 0:
+            continue
         if predicate(distance_km, target):
             ranked.append((distance_km, target))
 
@@ -595,14 +634,29 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 def read_rows(path: Path) -> list[dict[str, str]]:
     if path.suffix.lower() == ".zip":
         with zipfile.ZipFile(path) as archive:
+            members = [name for name in archive.namelist() if not name.endswith("/")]
+            member = next((name for name in members if "unlocode codelist.txt" in name.lower()), None)
+            if member:
+                with archive.open(member, "r") as handle:
+                    lines = [line.decode("utf-8", errors="replace").rstrip("\n") for line in handle]
+                return parse_unlocode_fixed_width(lines)
             member = next(
                 (
                     name
-                    for name in archive.namelist()
-                    if not name.endswith("/") and name.lower().endswith((".csv", ".txt"))
+                    for name in members
+                    if "unlocode codelist" in name.lower() and name.lower().endswith(".csv")
                 ),
                 None,
             )
+            if not member:
+                member = next(
+                    (
+                        name
+                        for name in members
+                        if not name.endswith("/") and name.lower().endswith((".csv", ".txt"))
+                    ),
+                    None,
+                )
             if not member:
                 return []
             with archive.open(member, "r") as handle:
@@ -634,6 +688,30 @@ def read_rows(path: Path) -> list[dict[str, str]]:
         handle.seek(0)
         delimiter = "\t" if sample.count("\t") > sample.count(",") else ","
         return list(csv.DictReader(handle, delimiter=delimiter))
+
+
+def parse_unlocode_fixed_width(lines: list[str]) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for line in lines:
+        if len(line) < 18:
+            continue
+        country = line[3:5].strip()
+        location = line[6:9].strip()
+        name = line[10:45].strip()
+        function = line[86:94].strip() if len(line) >= 94 else ""
+        coordinates = line[108:].strip() if len(line) >= 109 else ""
+        if not country or not location or not name or location.startswith("."):
+            continue
+        rows.append(
+            {
+                "country": country,
+                "location": location,
+                "name": name,
+                "function": function,
+                "coordinates": coordinates,
+            }
+        )
+    return rows
 
 
 def value_for(row: dict[str, Any], *names: str) -> str:
