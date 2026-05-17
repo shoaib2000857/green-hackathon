@@ -140,13 +140,13 @@ export default function DashboardPage() {
       <section className="relative mx-auto max-w-7xl">
         <header className="grid gap-6 rounded-[2rem] border border-white/50 bg-white/55 p-6 shadow-panel backdrop-blur md:grid-cols-[1.1fr_0.9fr] md:p-9">
           <div>
-            <p className="mb-4 inline-flex rounded-full border border-moss/20 bg-limewash px-4 py-2 text-sm font-semibold text-moss">
+            <p className="section-label mb-4 inline-flex rounded-full border border-moss/20 bg-limewash px-4 py-2 text-moss">
               Scope 3 logistics intelligence
             </p>
-            <h1 className="display max-w-4xl text-5xl font-black leading-[0.93] text-ink md:text-7xl">
+            <h1 className="dashboard-title max-w-4xl text-ink md:text-[4.75rem]">
               Carbon Passport AI for multimodal freight decisions.
             </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-ink/70">
+            <p className="body-copy mt-5 max-w-2xl text-lg text-ink/70">
               Compare shipment routes by carbon, cost, time, and risk. Generate a verifiable digital passport for every logistics decision.
             </p>
           </div>
@@ -158,7 +158,7 @@ export default function DashboardPage() {
               <label className="grid gap-2 text-sm text-white/70">
                 Weight kg
                 <input
-                  className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white outline-none focus:border-fern"
+                  className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white outline-none focus:border-fern numeric"
                   type="number"
                   min="1"
                   value={weightKg}
@@ -180,18 +180,18 @@ export default function DashboardPage() {
                 </select>
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
-                <button className="rounded-2xl bg-fern px-5 py-3 font-bold text-ink transition hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(93,202,165,0.18)]" disabled={loading}>
+                <button className="rounded-2xl bg-fern px-5 py-3 font-semibold text-ink transition hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(93,202,165,0.18)]" disabled={loading}>
                   {loading ? "Optimizing..." : "Optimize route"}
                 </button>
                 <Link
                   href={forecastHref}
-                  className="group inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-5 py-3 font-bold text-white shadow-[0_12px_28px_rgba(15,31,26,0.18)] transition hover:-translate-y-0.5 hover:border-white/15 hover:bg-white/15 hover:shadow-[0_16px_32px_rgba(93,202,165,0.16)]"
+                  className="group inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-5 py-3 font-semibold text-white shadow-[0_12px_28px_rgba(15,31,26,0.18)] transition hover:-translate-y-0.5 hover:border-white/15 hover:bg-white/15 hover:shadow-[0_16px_32px_rgba(93,202,165,0.16)]"
                 >
                   <span aria-hidden="true" className="text-base leading-none transition group-hover:scale-110">
                     ⚡
                   </span>
                   <span>Emissions Forecast</span>
-                  <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/65">
+                  <span className="section-label rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-white/65">
                     AI
                   </span>
                 </Link>
@@ -205,20 +205,20 @@ export default function DashboardPage() {
         {route ? (
           <section className="mt-6 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
             <div className="rounded-[2rem] bg-white/70 p-6 shadow-panel backdrop-blur">
-              <p className="text-sm font-bold uppercase tracking-[0.22em] text-moss">Recommended route</p>
-              <h2 className="display mt-2 text-4xl font-black capitalize text-ink">{route.strategy.replaceAll("_", " ")}</h2>
+              <p className="section-label text-moss">Recommended route</p>
+              <h2 className="display mt-2 text-3xl font-semibold capitalize text-ink md:text-4xl">{route.strategy.replaceAll("_", " ")}</h2>
               <div className="mt-4 rounded-[1.5rem] border border-moss/10 bg-limewash/65 p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-moss/70">AI Explanation</p>
-                  <span className="rounded-full bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-moss">
+                  <p className="section-label text-moss/70">AI Explanation</p>
+                  <span className="section-label rounded-full bg-white/70 px-3 py-1 text-moss">
                     {route.explanation_source}
                   </span>
                 </div>
-                <p className="mt-3 text-ink/75">{route.explanation}</p>
+                <p className="body-muted mt-3 text-ink/75">{route.explanation}</p>
                 {route.explanation_details.length > 0 ? (
                   <div className="mt-4 grid gap-2">
                     {route.explanation_details.map((detail) => (
-                      <p key={detail} className="text-sm text-ink/60">
+                      <p key={detail} className="body-muted text-sm text-ink/60">
                         {detail}
                       </p>
                     ))}
@@ -234,14 +234,14 @@ export default function DashboardPage() {
               </div>
 
               <button
-                className="mt-6 w-full rounded-2xl bg-ink px-5 py-4 font-bold text-white transition hover:translate-y-[-1px]"
+                className="mt-6 w-full rounded-2xl bg-ink px-5 py-4 font-semibold text-white transition hover:translate-y-[-1px]"
                 onClick={createShipment}
                 disabled={loading}
               >
                 Create shipment passport
               </button>
               {passportUrl ? (
-                <a className="mt-3 block rounded-2xl bg-limewash px-5 py-4 text-center font-bold text-moss" href={passportUrl}>
+                <a className="mt-3 block rounded-2xl bg-limewash px-5 py-4 text-center font-semibold text-moss" href={passportUrl}>
                   Open passport
                 </a>
               ) : null}
@@ -250,22 +250,22 @@ export default function DashboardPage() {
             <div className="rounded-[2rem] border border-white/50 bg-harbor p-6 text-white shadow-panel">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-bold uppercase tracking-[0.22em] text-white/55">Route map</p>
-                  <h3 className="display mt-1 text-4xl font-black">Journey graph</h3>
+                  <p className="section-label text-white/55">Route map</p>
+                  <h3 className="display mt-1 text-3xl font-semibold md:text-4xl">Journey graph</h3>
                 </div>
-                <span className="rounded-full bg-white/10 px-4 py-2 text-sm">{route.legs.length} legs</span>
+                <span className="rounded-full bg-white/10 px-4 py-2 text-sm numeric">{route.legs.length} legs</span>
               </div>
               <RouteMap legs={route.legs} totalCO2e={route.total_emissions_kg} />
               <div className="relative mt-4 overflow-hidden rounded-[1.5rem] bg-white/10 p-5">
                 <div className="relative grid gap-4">
                   {route.legs.map((leg, index) => (
                     <div key={`${leg.from_node}-${leg.to_node}-${index}`} className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl bg-white/90 p-3 text-ink">
-                      <span className={`rounded-full px-3 py-1 text-xs font-bold ${modeStyle[leg.mode]}`}>{leg.mode}</span>
+                      <span className={`section-label rounded-full px-3 py-1 ${modeStyle[leg.mode]}`}>{leg.mode}</span>
                       <div>
-                        <p className="font-bold">{leg.from_name} to {leg.to_name}</p>
-                        <p className="text-sm text-ink/60">{leg.distance_km.toLocaleString()} km, {leg.emissions_kg.toFixed(1)} kg CO2e</p>
+                        <p className="font-semibold">{leg.from_name} to {leg.to_name}</p>
+                        <p className="body-muted text-sm text-ink/60 numeric">{leg.distance_km.toLocaleString()} km, {leg.emissions_kg.toFixed(1)} kg CO2e</p>
                       </div>
-                      <span className="text-sm font-bold">{leg.travel_time_hr.toFixed(1)} hr</span>
+                      <span className="text-sm font-semibold numeric">{leg.travel_time_hr.toFixed(1)} hr</span>
                     </div>
                   ))}
                 </div>
@@ -287,8 +287,8 @@ export default function DashboardPage() {
           <section className="mt-6">
             <div className="mb-4 flex items-end justify-between gap-4">
               <div>
-                <p className="text-sm font-bold uppercase tracking-[0.22em] text-moss">Pareto-style options</p>
-                <h2 className="display text-4xl font-black">Tradeoff routes</h2>
+                <p className="section-label text-moss">Pareto-style options</p>
+                <h2 className="display text-3xl font-semibold md:text-4xl">Tradeoff routes</h2>
               </div>
               <p className="hidden text-sm text-ink/60 md:block">API base: {API_BASE_URL}</p>
             </div>
@@ -303,8 +303,8 @@ export default function DashboardPage() {
                       : "border-white/60 bg-white/55 backdrop-blur"
                   } ${carbonPrice > 0 && lowestCarbonAdjustedRouteId === option.route_id ? "border-l-[3px] border-l-[#5DCAA5]" : ""}`}
                 >
-                  <p className="text-sm font-bold uppercase tracking-[0.18em] text-moss">{option.strategy.replaceAll("_", " ")}</p>
-                  <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                  <p className="section-label text-moss">{option.strategy.replaceAll("_", " ")}</p>
+                  <div className="metric-md numeric mt-4 grid grid-cols-2 gap-2 text-sm">
                     <span>{option.total_emissions_kg.toFixed(1)} kg CO2e</span>
                     <span>
                       ${option.total_cost_usd.toLocaleString()}
@@ -329,7 +329,7 @@ export default function DashboardPage() {
 
         {analytics ? (
           <section className="mt-6 rounded-[2rem] bg-ink p-6 text-white">
-            <p className="text-sm font-bold uppercase tracking-[0.22em] text-white/50">Scope 3 snapshot</p>
+            <p className="section-label text-white/50">Scope 3 snapshot</p>
             <div className="mt-4 grid gap-3 md:grid-cols-4">
               <Metric dark label="Shipments" value={analytics.shipment_count.toString()} />
               <Metric dark label="Total CO2e" value={`${analytics.total_emissions_kg.toFixed(1)} kg`} />
@@ -348,7 +348,7 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
     <label className="grid gap-2 text-sm text-white/70">
       {label}
       <input
-        className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white outline-none focus:border-fern"
+        className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-white outline-none focus:border-fern numeric"
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
@@ -359,8 +359,8 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
 function Metric({ label, value, dark = false }: { label: string; value: string; dark?: boolean }) {
   return (
     <div className={`rounded-2xl p-4 ${dark ? "bg-white/10" : "bg-limewash"}`}>
-      <p className={`text-xs font-bold uppercase tracking-[0.18em] ${dark ? "text-white/50" : "text-moss/70"}`}>{label}</p>
-      <p className="mt-2 text-2xl font-black">{value}</p>
+      <p className={`section-label ${dark ? "text-white/50" : "text-moss/70"}`}>{label}</p>
+      <p className={`metric-xl numeric mt-2 ${dark ? "text-white" : "text-ink"}`}>{value}</p>
     </div>
   );
 }

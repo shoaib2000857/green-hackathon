@@ -45,14 +45,14 @@ export default function CarbonPriceCalculator({ routes, recommendedRoute, carbon
   return (
     <section className="mt-6 rounded-[2rem] bg-mist p-6 shadow-panel backdrop-blur">
       <div>
-        <p className="text-sm font-bold uppercase tracking-[0.22em] text-moss">Carbon price simulator</p>
-        <h2 className="display mt-2 text-4xl font-black text-ink">True-cost lens</h2>
-        <p className="mt-2 text-sm text-ink/65">Adjust the carbon tax rate to see true total cost across all routes</p>
+        <p className="section-label text-moss">Carbon price simulator</p>
+        <h2 className="dashboard-title mt-2 text-ink md:text-[3.25rem]">True-cost lens</h2>
+        <p className="body-copy mt-2 text-sm text-ink/65">Adjust the carbon tax rate to see true total cost across all routes</p>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[3fr_2fr]">
         <div className="rounded-[1.5rem] bg-white/60 p-5">
-          <label htmlFor="carbon-price" className="text-lg font-black text-ink">
+          <label htmlFor="carbon-price" className="metric-md text-ink">
             Carbon price: ${carbonPrice} / tonne CO2e
           </label>
           <div className="relative mt-6 pb-14">
@@ -79,10 +79,10 @@ export default function CarbonPriceCalculator({ routes, recommendedRoute, carbon
                     style={{ left: point.left }}
                   >
                     <span className={`h-3 w-px ${isActive ? "bg-fern" : "bg-ink/25"}`} />
-                    <span className={`mt-2 text-xs ${isActive ? "font-black text-fern" : "font-semibold text-ink/55"}`}>
+                    <span className={`mt-2 text-xs numeric ${isActive ? "font-semibold text-fern" : "font-medium text-ink/55"}`}>
                       {point.label}
                     </span>
-                    <span className={`text-[11px] leading-tight ${isActive ? "font-bold text-fern" : "text-ink/45"}`}>{point.detail}</span>
+                    <span className={`text-[11px] leading-tight ${isActive ? "font-semibold text-fern" : "text-ink/45"}`}>{point.detail}</span>
                   </div>
                 );
               })}
@@ -113,9 +113,9 @@ function SummaryMetric({ label, title, value, tone = "default" }) {
 
   return (
     <div className={`rounded-2xl p-4 ${toneClass}`}>
-      <p className="text-xs font-bold uppercase tracking-[0.18em] opacity-75">{label}</p>
-      <p className="mt-1 text-sm font-semibold opacity-75">{title}</p>
-      <p className="mt-2 text-2xl font-black">{value}</p>
+      <p className="section-label opacity-75">{label}</p>
+      <p className="body-copy mt-1 text-sm font-semibold opacity-75">{title}</p>
+      <p className="metric-xl numeric mt-2">{value}</p>
     </div>
   );
 }

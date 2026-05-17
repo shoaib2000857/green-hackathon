@@ -93,8 +93,8 @@ export default function CarbonOffsetPanel({ totalCO2eKg, passportId, onOffsetCon
   return (
     <section className="mt-8 rounded-[2rem] bg-mist p-5 shadow-panel">
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-moss/70">Carbon footprint in perspective</p>
-        <p className="mt-2 text-sm text-ink/70">This shipment emitted {roundedCO2e.toFixed(1)} kg CO2e. Here's what that means:</p>
+        <p className="section-label text-moss/70">Carbon footprint in perspective</p>
+        <p className="body-copy mt-2 text-sm text-ink/70">This shipment emitted {roundedCO2e.toFixed(1)} kg CO2e. Here's what that means:</p>
       </div>
 
       <div className="mt-5 grid gap-3 md:grid-cols-3">
@@ -105,11 +105,11 @@ export default function CarbonOffsetPanel({ totalCO2eKg, passportId, onOffsetCon
 
       <div className="mt-6 grid gap-5 lg:grid-cols-[3fr_2fr]">
         <div className="rounded-2xl bg-white/60 p-5">
-          <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-moss/70">Offset this shipment</p>
-          <p className="mt-3 text-2xl font-black text-ink">Estimated offset cost: ${formatMoney(offsetCost)}</p>
+          <p className="section-label text-moss/70">Offset this shipment</p>
+          <p className="metric-xl numeric mt-3 text-ink">Estimated offset cost: ${formatMoney(offsetCost)}</p>
           <p className="mt-1 text-xs text-ink/50">Gold Standard registry rate ~${DEFAULT_OFFSET_RATE}/tonne</p>
 
-          <label className="mt-5 grid gap-2 text-sm font-semibold text-ink/75">
+          <label className="mt-5 grid gap-2 text-sm font-semibold text-ink/75 numeric">
             Adjust offset rate: ${offsetRate}/tonne CO2e
             <input
               type="range"
@@ -144,16 +144,16 @@ export default function CarbonOffsetPanel({ totalCO2eKg, passportId, onOffsetCon
         </div>
 
         <div className="rounded-2xl bg-white/60 p-5">
-          <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-moss/70">Your impact</p>
+          <p className="section-label text-moss/70">Your impact</p>
           <div className="mt-4 flex flex-wrap gap-1.5 text-[#6b8f3a]">
             {treeIcons.map((index) => (
               <span key={index} className="offset-tree-icon" style={{ animationDelay: `${index * 75}ms` }}>
                 <TreeIcon />
               </span>
             ))}
-            {additionalTrees > 0 ? <span className="ml-1 self-center text-xs font-bold text-ink/45">+{additionalTrees.toLocaleString()} more</span> : null}
+            {additionalTrees > 0 ? <span className="ml-1 self-center text-xs font-semibold text-ink/45 numeric">+{additionalTrees.toLocaleString()} more</span> : null}
           </div>
-          <p className="mt-4 text-[13px] text-ink/55">{treesEquivalent.toLocaleString()} trees sequestering carbon for 1 year</p>
+          <p className="metric-md numeric mt-4 text-ink/55">{treesEquivalent.toLocaleString()} trees sequestering carbon for 1 year</p>
 
           <div className="mt-5">
             <div className="h-1.5 w-full overflow-hidden rounded-full bg-white">
@@ -171,8 +171,8 @@ function EquivalencyCard({ icon, value, label }) {
   return (
     <div className="rounded-2xl bg-white/60 p-4">
       <div className="text-[#6b8f3a]">{icon}</div>
-      <p className="mt-3 text-[28px] font-medium leading-tight text-ink">{value}</p>
-      <p className="mt-2 text-sm leading-5 text-ink/55">{label}</p>
+      <p className="metric-xl numeric mt-3 text-ink">{value}</p>
+      <p className="body-muted mt-2 text-sm text-ink/55">{label}</p>
     </div>
   );
 }
