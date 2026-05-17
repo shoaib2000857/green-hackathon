@@ -12,3 +12,6 @@ build/
 coverage/
 *.sqlite3
 
+data/logistics_graph.json
+data/logistics_graph.json
+data/logistics_graph.json
